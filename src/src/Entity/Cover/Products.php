@@ -132,6 +132,36 @@ class Products implements \JsonSerializable
         return implode(" ", $desc);
     }
 
+    public function getPrice(): array
+    {
+        $latestPrices = [
+            'VK' => ['date' => null, 'price' => null],
+            'STR' => ['date' => null, 'price' => null],
+        ];
+
+        foreach ($this->getProductsBuplists() as $buplist) {
+            $preiskat = trim($buplist->getPreiskat() ?? '');
+            $gueltigAb = $buplist->getGueltigAb();
+
+            foreach ($buplist->getProductsBumPreis() as $bumpreis) {
+                var_dump($bumpreis->getPreis());
+                $price = (float) $bumpreis->getPreis();
+
+                if (in_array($preiskat, ['VK', 'STR'], true)) {
+                    if (
+                        $latestPrices[$preiskat]['date'] === null ||
+                        $gueltigAb > $latestPrices[$preiskat]['date']
+                    ) {
+                        $latestPrices[$preiskat]['date'] = $gueltigAb;
+                        $latestPrices[$preiskat]['price'] = $price;
+                    }
+                }
+            }
+        }
+        var_dump($latestPrices);
+        return $latestPrices;
+    }
+
     public function getLink(){
         foreach($this->getProductsC2Warts() as $c2wart){
             if($c2wart->getSichtbarkeit() == 4){

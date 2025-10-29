@@ -3,6 +3,7 @@
 namespace App\Mapper;
 
 use App\Entity\Cover\Products;
+use App\Entity\Cover\ProductsC2Wart;
 
 class GoogleMapper
 {
@@ -22,21 +23,82 @@ class GoogleMapper
         $this->channel->addChild('description', 'Google Shopping Feed for Pareyshop');
     }
 
-    public function addProduct(Products $product):void{
-        $item = $this->channel->addChild('item');
-        $item->addChild('g:id',$product->getArtikelNr(), 'http://base.google.com/ns/1.0');
-        $item->addChild('g:title',htmlspecialchars($product->getTitle()), 'http://base.google.com/ns/1.0');
-        $description = $product->getDescription() ?? '';
-        $description = preg_replace('/\s+/', ' ', $description); // collapse whitespace
-        $description = trim($description);
+    public function addProduct(Products $product): void
+    {
+        // get common info
+        $artikelNr = null;
+        foreach ($product->getProductsMetas() as $meta) {
+            $artikelNr = $meta->getArtikelNr();
+        }
 
-        // Create <g:description> with CDATA (no escaping)
+        // if there are variants (C2WART), make one <item> per variant
+        if ($product->getProductsC2Warts()->count() > 0) {
+            foreach ($product->getProductsC2Warts() as $variant) {
+                $this->addVariant($product, $variant, $artikelNr);
+            }
+        } else {
+            // simple product fallback
+            $this->addVariant($product, null, $artikelNr);
+        }
+    }
+
+    private function addVariant(Products $product, ?ProductsC2Wart $variant, ?string $artikelNr): void
+    {
+        $item = $this->channel->addChild('item');
+
+        // determine SKU/id
+        $sku = $variant?->getSku() ?? $product->getArtikelNr();
+
+        // basic data
+        $title = trim($product->getTitle() ?? '');
+        $desc = $variant?->getSeo() ?? $product->getDescription() ?? '';
+        $desc = preg_replace('/\s+/', ' ', $desc);
+        $desc = trim($desc);
+
+        // add g:id
+        $item->addChild('g:id', $sku, 'http://base.google.com/ns/1.0');
+        $item->addChild('g:title', $title, 'http://base.google.com/ns/1.0');
+
+        // description CDATA
         $descNode = dom_import_simplexml(
             $item->addChild('g:description', null, 'http://base.google.com/ns/1.0')
         );
         $owner = $descNode->ownerDocument;
-        $descNode->appendChild($owner->createCDATASection($description));
-        $item->addChild('link', 'https://pareyshop.de/' . $product->getLink());
+        $descNode->appendChild($owner->createCDATASection($desc));
+
+        // link
+        $link = $variant?->getArtikelUrlWs() ?? $product->getLink() ?? '';
+        $item->addChild('link', 'https://pareyshop.de/' . ltrim($link, '/'));
+
+        // image (placeholder for now)
+        $item->addChild('g:image_link', 'https://pareyshop.de/media/catalog/product/default.jpg', 'http://base.google.com/ns/1.0');
+
+        // availability
+        $item->addChild('g:availability', 'in stock', 'http://base.google.com/ns/1.0');
+
+        // price
+        $price = $product->getPrice() ?? 0.00;
+        $item->addChild('g:price', sprintf('%.2f EUR', (float) $price), 'http://base.google.com/ns/1.0');
+
+        // group id for variants
+        if ($artikelNr) {
+            $item->addChild('g:item_group_id', $artikelNr, 'http://base.google.com/ns/1.0');
+        }
+
+        // optional size mapping from BUAUFTXT
+        $variantLabel = '';
+        if ($variant && $product->getProductsBuAufTxts()->count() > 0) {
+            foreach ($product->getProductsBuAufTxts() as $aufl) {
+                if ($aufl->getLAuflNr() === (int) $variant->getLAuflNr()) {
+                    $variantLabel = trim($aufl->getAuflText() ?? '');
+                }
+            }
+        }
+
+        if ($variantLabel !== '') {
+            $item->addChild('g:size', $variantLabel, 'http://base.google.com/ns/1.0');
+            $item->addChild('g:title', $title . ' – Größe ' . $variantLabel, 'http://base.google.com/ns/1.0');
+        }
     }
 
     public function addProductOld(Products $product): void
