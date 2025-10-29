@@ -2,6 +2,9 @@
 
 namespace App\Command;
 
+use App\Entity\Cover\Products;
+use App\Mapper\GoogleMapper;
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -16,34 +19,26 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class GoogleProductCommand extends Command
 {
-    public function __construct()
+
+    public function __construct(private ManagerRegistry $registry)
     {
         parent::__construct();
-    }
-
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('arg1', InputArgument::OPTIONAL, 'Argument description')
-            ->addOption('option1', null, InputOption::VALUE_NONE, 'Option description')
-        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $arg1 = $input->getArgument('arg1');
+        $io->title('Google Product Command');
+        $artikel_nr = $io->ask('Welche Artikelnummer?','30010036');
 
-        if ($arg1) {
-            $io->note(sprintf('You passed an argument: %s', $arg1));
+        $em = $this->registry->getManager('cover');
+        $products = $em->getRepository(Products::class)->findBy(['artikel_nr' => $artikel_nr],[],100,0);
+        $io->section('Gefundene Einträge: ' . count($products) . ' für die Artikelnummer ' . $artikel_nr);
+        $googleMapper = new GoogleMapper();
+        foreach($products as $product){
+            $googleMapper->addProduct($product);
         }
-
-        if ($input->getOption('option1')) {
-            // ...
-        }
-
-        $io->success('You have a new command! Now make it your own! Pass --help to see your options.');
-
+        file_put_contents('/opt/feed/' . $artikel_nr . '.xml',$googleMapper->getFeed());
         return Command::SUCCESS;
     }
 }

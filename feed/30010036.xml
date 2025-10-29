@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+    <channel>
+        <title>Pareyshop Product Feed</title>
+        <link>https://pareyshop.de</link>
+        <description>Google Shopping Feed for Pareyshop</description>
+        <item>
+            <g:id>BU-30010036-500-01-PPZ</g:id>
+            <title>DREHSCHEIBE</title>
+            <description><![CDATA[DREHSCHEIBE]]></description>
+            <g:manufacturer>Pario Print</g:manufacturer>
+            <g:google_product_category/>
+            <g:product_type>Jagen &gt; DJZ Edition &gt; Allerlei/Sonstiges/Verschiedenes</g:product_type>
+            <link>drehscheibe-djz-30010036</link>
+            <g:image_link>https://pareyshop.de/media/catalog/product/default.jpg</g:image_link>
+            <g:additional_image_link/>
+            <g:condition>new</g:condition>
+            <g:availability>in stock</g:availability>
+            <g:price>0.00 EUR</g:price>
+            <g:brand/>
+            <g:gtin/>
+            <g:mpn>BU-30010036-500-01-PPZ</g:mpn>
+            <g:identifier_exists>TRUE</g:identifier_exists>
+            <g:gender/>
+            <g:age_group/>
+            <g:size/>
+            <g:item_group_id/>
+            <g:color/>
+            <g:is_bundle>false</g:is_bundle>
+            <g:material/>
+            <g:pattern/>
+            <g:shipping_weight>0.000000 kg</g:shipping_weight>
+            <g:tax/>
+            <g:shipping>
+                <g:country>DE</g:country>
+                <g:region/>
+                <g:service/>
+                <g:price>5,95 EUR</g:price>
+            </g:shipping>
+            <g:multipack/>
+            <g:adult/>
+            <g:adwords_grouping/>
+            <g:adwords_labels/>
+            <g:adwords_redirect/>
+            <g:unit_pricing_measure/>
+            <g:unit_pricing_base_measure/>
+            <g:energy_efficiency_class/>
+            <g:online_only/>
+        </item>
+    </channel>
+</rss>

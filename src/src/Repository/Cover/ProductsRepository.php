@@ -18,17 +18,33 @@ class ProductsRepository extends ServiceEntityRepository
 
     public function findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null): array
     {
-        $query =  $this->createQueryBuilder('p')
-            ->innerJoin('p.productsC2Warts', 'c2w')
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.productsMetas', 'md')      // like LEFT JOIN BUMANAUS
+            ->leftJoin('p.productsC2Warts', 'c2w')   // like LEFT JOIN C2WART
             ->andWhere('c2w.shop_status = :status')
             ->setParameter('status', 1)
-            ->addSelect('c2w');
-        if($limit !== null) {
-            $query->setMaxResults($limit);
-        }
-            return $query->getQuery()
-            ->getResult();
+            ->addSelect('md', 'c2w');
 
+        if (isset($criteria['artikel_nr'])) {
+            $qb->andWhere('trim(md.artikel_nr) = :artikel_nr')
+                ->setParameter('artikel_nr', $criteria['artikel_nr']);
+        }
+
+        if ($limit !== null) {
+            $qb->setMaxResults($limit);
+        }
+
+        if ($offset !== null) {
+            $qb->setFirstResult($offset);
+        }
+
+        if ($orderBy) {
+            foreach ($orderBy as $field => $direction) {
+                $qb->addOrderBy("p.$field", $direction);
+            }
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     //    /**

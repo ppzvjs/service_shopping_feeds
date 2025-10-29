@@ -13,6 +13,7 @@ services:
       - ./src:/var/www/html
       - ./apache/ssl/localhost.crt:/etc/ssl/certs/localhost.crt
       - ./apache/ssl/localhost.key:/etc/ssl/private/localhost.key
+      - ./feed:/opt/feed
     depends_on:
       - db
 
@@ -46,6 +47,7 @@ services:
       dockerfile: apache.dockerfile
     volumes:
       - ./src:/var/www/html
+      - ./feed:/opt/feed
     entrypoint: [ 'php', '/var/www/html/bin/console' ]
 
 volumes:

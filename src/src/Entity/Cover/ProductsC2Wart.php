@@ -14,7 +14,7 @@ class ProductsC2Wart
     private ?int $lfd_nr = null;
 
     #[ORM\Column(name: "L_AUSG_NR", length: 255)]
-    private ?string $l_ausg_nr = null;
+    private ?int $l_ausg_nr = null;
 
     #[ORM\Column(name: "L_AUFL_NR", length: 255)]
     private ?string $l_aufl_nr = null;
@@ -43,7 +43,7 @@ class ProductsC2Wart
         return $this->lfd_nr;
     }
 
-    public function getLAusgNr(): ?string
+    public function getLAusgNr(): ?int
     {
         return $this->l_ausg_nr;
     }
