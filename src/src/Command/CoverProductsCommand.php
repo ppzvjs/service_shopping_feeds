@@ -32,9 +32,17 @@ class CoverProductsCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $con = $this->registry->getManager('cover');
-        $products = $con->getRepository(Products::class)->findAll();
+        $products = $con->getRepository(Products::class)->findBy([],[],100,0);
+        $data = array_map(fn(Products $p) => $p->jsonSerialize(), $products);
 
-        $io->text(count($products));
+        // Get dynamic table headers from first item’s keys
+        $headers = array_keys($data[0]);
+
+        // Convert associative arrays to plain value rows
+        $rows = array_map('array_values', $data);
+
+        // Show table
+        $io->table($headers, $rows);
         return Command::SUCCESS;
     }
 }
