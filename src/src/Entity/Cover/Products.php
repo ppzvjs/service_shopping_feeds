@@ -36,11 +36,18 @@ class Products implements \JsonSerializable
     #[ORM\OneToMany(targetEntity: ProductsC2Wart::class, mappedBy: 'product')]
     private Collection $productsC2Warts;
 
+    /**
+     * @var Collection<int, ProductsBuAufTxt>
+     */
+    #[ORM\OneToMany(targetEntity: ProductsBuAufTxt::class, mappedBy: 'product')]
+    private Collection $productsBuAufTxts;
+
     public function __construct()
     {
         $this->productsMetas = new ArrayCollection();
         $this->productsBuplists = new ArrayCollection();
         $this->productsC2Warts = new ArrayCollection();
+        $this->productsBuAufTxts = new ArrayCollection();
     }
 
 
@@ -111,6 +118,28 @@ class Products implements \JsonSerializable
         ];
     }
 
+    public function getArtikelNr(){
+        foreach($this->getProductsMetas() as $meta){;
+            $artnr[] = $meta->getArtikelNr();
+        }
+        return implode(",", $artnr);
+    }
+
+    public function getDescription(){
+        foreach($this->getProductsBuAufTxts() as $buAufTxt){;
+            $desc[] = $buAufTxt->getAuflText();
+        }
+        return implode(" ", $desc);
+    }
+
+    public function getLink(){
+        foreach($this->getProductsC2Warts() as $c2wart){
+            if($c2wart->getSichtbarkeit() == 4){
+                return $c2wart->getArtikelUrlWs();
+            }
+        }
+    }
+
     /**
      * @return Collection<int, ProductsBuplist>
      */
@@ -165,6 +194,36 @@ class Products implements \JsonSerializable
             // set the owning side to null (unless already changed)
             if ($productsC2Wart->getProduct() === $this) {
                 $productsC2Wart->setProduct(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ProductsBuAufTxt>
+     */
+    public function getProductsBuAufTxts(): Collection
+    {
+        return $this->productsBuAufTxts;
+    }
+
+    public function addProductsBuAufTxt(ProductsBuAufTxt $productsBuAufTxt): static
+    {
+        if (!$this->productsBuAufTxts->contains($productsBuAufTxt)) {
+            $this->productsBuAufTxts->add($productsBuAufTxt);
+            $productsBuAufTxt->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProductsBuAufTxt(ProductsBuAufTxt $productsBuAufTxt): static
+    {
+        if ($this->productsBuAufTxts->removeElement($productsBuAufTxt)) {
+            // set the owning side to null (unless already changed)
+            if ($productsBuAufTxt->getProduct() === $this) {
+                $productsBuAufTxt->setProduct(null);
             }
         }
 

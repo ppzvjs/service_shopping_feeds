@@ -38,6 +38,9 @@ class ProductsC2Wart
     #[ORM\JoinColumn(name: "L_AUSG_NR", referencedColumnName: "L_AUSG_NR", nullable: false)]
     private ?Products $product = null;
 
+    #[ORM\Column(name: "SICHTBARKEIT")]
+    private ?int $sichtbarkeit = null;
+
     public function getLfdNr(): ?int
     {
         return $this->lfd_nr;
@@ -135,6 +138,18 @@ class ProductsC2Wart
     public function setProduct(?Products $product): static
     {
         $this->product = $product;
+
+        return $this;
+    }
+
+    public function getSichtbarkeit(): ?int
+    {
+        return $this->sichtbarkeit;
+    }
+
+    public function setSichtbarkeit(int $sichtbarkeit): static
+    {
+        $this->sichtbarkeit = $sichtbarkeit;
 
         return $this;
     }

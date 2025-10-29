@@ -22,7 +22,24 @@ class GoogleMapper
         $this->channel->addChild('description', 'Google Shopping Feed for Pareyshop');
     }
 
-    public function addProduct(Products $product): void
+    public function addProduct(Products $product):void{
+        $item = $this->channel->addChild('item');
+        $item->addChild('g:id',$product->getArtikelNr(), 'http://base.google.com/ns/1.0');
+        $item->addChild('g:title',htmlspecialchars($product->getTitle()), 'http://base.google.com/ns/1.0');
+        $description = $product->getDescription() ?? '';
+        $description = preg_replace('/\s+/', ' ', $description); // collapse whitespace
+        $description = trim($description);
+
+        // Create <g:description> with CDATA (no escaping)
+        $descNode = dom_import_simplexml(
+            $item->addChild('g:description', null, 'http://base.google.com/ns/1.0')
+        );
+        $owner = $descNode->ownerDocument;
+        $descNode->appendChild($owner->createCDATASection($description));
+        $item->addChild('link', 'https://pareyshop.de/' . $product->getLink());
+    }
+
+    public function addProductOld(Products $product): void
     {
         $item = $this->channel->addChild('item');
 

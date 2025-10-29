@@ -21,9 +21,10 @@ class ProductsRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('p')
             ->leftJoin('p.productsMetas', 'md')      // like LEFT JOIN BUMANAUS
             ->leftJoin('p.productsC2Warts', 'c2w')   // like LEFT JOIN C2WART
+            ->leftJoin('p.productsBuAufTxts', 'bat') // LEFT JOIN BUAUFTXT
             ->andWhere('c2w.shop_status = :status')
             ->setParameter('status', 1)
-            ->addSelect('md', 'c2w');
+            ->addSelect('md', 'c2w','bat');
 
         if (isset($criteria['artikel_nr'])) {
             $qb->andWhere('trim(md.artikel_nr) = :artikel_nr')
