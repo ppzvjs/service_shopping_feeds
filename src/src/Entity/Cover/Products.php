@@ -24,9 +24,23 @@ class Products implements \JsonSerializable
     #[ORM\OneToMany(targetEntity: ProductsMeta::class, mappedBy: 'products')]
     private Collection $productsMetas;
 
+    /**
+     * @var Collection<int, ProductsBuplist>
+     */
+    #[ORM\OneToMany(targetEntity: ProductsBuplist::class, mappedBy: 'product')]
+    private Collection $productsBuplists;
+
+    /**
+     * @var Collection<int, ProductsC2Wart>
+     */
+    #[ORM\OneToMany(targetEntity: ProductsC2Wart::class, mappedBy: 'product')]
+    private Collection $productsC2Warts;
+
     public function __construct()
     {
         $this->productsMetas = new ArrayCollection();
+        $this->productsBuplists = new ArrayCollection();
+        $this->productsC2Warts = new ArrayCollection();
     }
 
 
@@ -79,14 +93,81 @@ class Products implements \JsonSerializable
 
     public function jsonSerialize(): mixed
     {
-        $artnr = null;
         foreach($this->getProductsMetas() as $meta){;
-            $artnr = $meta->getArtikelNr();
+            $artnr[] = $meta->getArtikelNr();
+        }
+        foreach($this->getProductsBuplists() as $buplist){;
+            $preiskat[] = $buplist->getPreiskat();
+        }
+        foreach($this->getProductsC2Warts() as $c2wart){;
+            $ausgnr[] = $c2wart->getSku() . ",";
         }
         return [
             'l_ausg_nr' => $this->getLAusgNr(),
             'title' => $this->getTitle(),
-            'artikel_nr' => $artnr,
+            'artikel_nr' => implode(",", $artnr),
+            'preiskat' => implode(",", $preiskat),
+            'l_ausg_nrs_c2wart' => implode("", $ausgnr),
         ];
+    }
+
+    /**
+     * @return Collection<int, ProductsBuplist>
+     */
+    public function getProductsBuplists(): Collection
+    {
+        return $this->productsBuplists;
+    }
+
+    public function addProductsBuplist(ProductsBuplist $productsBuplist): static
+    {
+        if (!$this->productsBuplists->contains($productsBuplist)) {
+            $this->productsBuplists->add($productsBuplist);
+            $productsBuplist->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProductsBuplist(ProductsBuplist $productsBuplist): static
+    {
+        if ($this->productsBuplists->removeElement($productsBuplist)) {
+            // set the owning side to null (unless already changed)
+            if ($productsBuplist->getProduct() === $this) {
+                $productsBuplist->setProduct(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ProductsC2Wart>
+     */
+    public function getProductsC2Warts(): Collection
+    {
+        return $this->productsC2Warts;
+    }
+
+    public function addProductsC2Wart(ProductsC2Wart $productsC2Wart): static
+    {
+        if (!$this->productsC2Warts->contains($productsC2Wart)) {
+            $this->productsC2Warts->add($productsC2Wart);
+            $productsC2Wart->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProductsC2Wart(ProductsC2Wart $productsC2Wart): static
+    {
+        if ($this->productsC2Warts->removeElement($productsC2Wart)) {
+            // set the owning side to null (unless already changed)
+            if ($productsC2Wart->getProduct() === $this) {
+                $productsC2Wart->setProduct(null);
+            }
+        }
+
+        return $this;
     }
 }

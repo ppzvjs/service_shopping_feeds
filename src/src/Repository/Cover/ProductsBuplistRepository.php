@@ -2,37 +2,22 @@
 
 namespace App\Repository\Cover;
 
-use App\Entity\Cover\Products;
+use App\Entity\Cover\ProductsBuplist;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Products>
+ * @extends ServiceEntityRepository<ProductsBuplist>
  */
-class ProductsRepository extends ServiceEntityRepository
+class ProductsBuplistRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Products::class);
-    }
-
-    public function findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null): array
-    {
-        $query =  $this->createQueryBuilder('p')
-            ->innerJoin('p.productsC2Warts', 'c2w')
-            ->andWhere('c2w.shop_status = :status')
-            ->setParameter('status', 1)
-            ->addSelect('c2w');
-        if($limit !== null) {
-            $query->setMaxResults($limit);
-        }
-            return $query->getQuery()
-            ->getResult();
-
+        parent::__construct($registry, ProductsBuplist::class);
     }
 
     //    /**
-    //     * @return Products[] Returns an array of Products objects
+    //     * @return ProductsBuplist[] Returns an array of ProductsBuplist objects
     //     */
     //    public function findByExampleField($value): array
     //    {
@@ -46,7 +31,7 @@ class ProductsRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    //    public function findOneBySomeField($value): ?Products
+    //    public function findOneBySomeField($value): ?ProductsBuplist
     //    {
     //        return $this->createQueryBuilder('p')
     //            ->andWhere('p.exampleField = :val')
