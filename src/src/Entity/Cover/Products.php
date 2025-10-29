@@ -144,7 +144,6 @@ class Products implements \JsonSerializable
             $gueltigAb = $buplist->getGueltigAb();
 
             foreach ($buplist->getProductsBumPreis() as $bumpreis) {
-                var_dump($bumpreis->getPreis());
                 $price = (float) $bumpreis->getPreis();
 
                 if (in_array($preiskat, ['VK', 'STR'], true)) {
@@ -153,12 +152,11 @@ class Products implements \JsonSerializable
                         $gueltigAb > $latestPrices[$preiskat]['date']
                     ) {
                         $latestPrices[$preiskat]['date'] = $gueltigAb;
-                        $latestPrices[$preiskat]['price'] = $price;
+                        $latestPrices[$preiskat]['price'] = (float) $price;
                     }
                 }
             }
         }
-        var_dump($latestPrices);
         return $latestPrices;
     }
 

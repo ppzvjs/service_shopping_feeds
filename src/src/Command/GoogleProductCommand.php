@@ -29,8 +29,8 @@ class GoogleProductCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $io->title('Google Product Command');
-        $artikel_nr = $io->ask('Welche Artikelnummer?','30010086');
-
+        //$artikel_nr = $io->ask('Welche Artikelnummer?','30010086');
+        $artikel_nr = 30010036;
         $em = $this->registry->getManager('cover');
         $products = $em->getRepository(Products::class)->findBy(['artikel_nr' => $artikel_nr],[],100,0);
         $io->section('Gefundene Einträge: ' . count($products) . ' für die Artikelnummer ' . $artikel_nr);

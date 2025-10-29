@@ -78,8 +78,13 @@ class GoogleMapper
 
         // price
         $price = $product->getPrice() ?? 0.00;
-        $item->addChild('g:price', sprintf('%.2f EUR', (float) $price), 'http://base.google.com/ns/1.0');
 
+        if($price['STR']['price'] !== null){
+            $item->addChild('g:sale_price', sprintf('%.2f EUR', (float) $price['VK']['price']), 'http://base.google.com/ns/1.0');
+            $item->addChild('g:price', sprintf('%.2f EUR', (float) $price['STR']['price']), 'http://base.google.com/ns/1.0');
+        }else{
+            $item->addChild('g:price', sprintf('%.2f EUR', (float) $price['VK']['price']), 'http://base.google.com/ns/1.0');
+        }
         // group id for variants
         if ($artikelNr) {
             $item->addChild('g:item_group_id', $artikelNr, 'http://base.google.com/ns/1.0');

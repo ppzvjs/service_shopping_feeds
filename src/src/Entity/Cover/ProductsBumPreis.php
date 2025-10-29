@@ -43,7 +43,7 @@ class ProductsBumPreis
     // ✅ Doctrine returns decimal as string, convert safely to float here
     public function getPreis(): ?float
     {
-        return $this->preis !== null ? (float) $this->preis : null;
+        return $this->preis !== null ? (float) str_replace(',','.',$this->preis) : null;
     }
 
     // ✅ Setter accepts float, but stores string (so Doctrine won't complain)

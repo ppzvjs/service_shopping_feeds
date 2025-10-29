@@ -28,6 +28,10 @@ RUN docker-php-ext-configure oci8 --with-oci8=instantclient,/opt/oracle/instantc
 
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 
+# ---- XDEBUG -----------------------------------------------------------------
+RUN pecl install xdebug \
+ && docker-php-ext-enable xdebug
+
 
 # Enable Apache modules
 COPY conf/app.conf /etc/apache2/sites-available/app.conf
@@ -40,4 +44,6 @@ RUN a2ensite app \
 RUN chown -R www-data:www-data /var/www/html
 
 # Increase PHP memory limit
+# ---- PHP CONFIG --------------------------------------------------------------
 RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory-limit.ini
+COPY conf/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
