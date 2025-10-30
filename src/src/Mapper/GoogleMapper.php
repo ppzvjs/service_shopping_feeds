@@ -3,6 +3,7 @@
 namespace App\Mapper;
 
 use App\Entity\Cover\Products;
+use App\Entity\Cover\ProductsBuAusGab;
 use App\Entity\Cover\ProductsC2Wart;
 
 class GoogleMapper
@@ -10,8 +11,11 @@ class GoogleMapper
     private \SimpleXMLElement $xml;
     private \SimpleXMLElement $channel;
 
-    public function __construct()
+    private $conn;
+
+    public function __construct($conn)
     {
+        $this->conn = $conn;
         // Proper header for Google Merchant feed
         $this->xml = new \SimpleXMLElement(
             '<?xml version="1.0" encoding="UTF-8"?><rss xmlns:g="http://base.google.com/ns/1.0" version="2.0"></rss>'
@@ -51,7 +55,7 @@ class GoogleMapper
 
         // basic data
         $title = trim($product->getTitle() ?? '');
-        $desc = $variant?->getSeo() ?? $product->getDescription() ?? '';
+        $desc = $product->getDescription();
         $desc = preg_replace('/\s+/', ' ', $desc);
         $desc = trim($desc);
 
@@ -99,11 +103,28 @@ class GoogleMapper
                 }
             }
         }
+        $this->buildShipping($item,$product,$price);
+    }
 
-        if ($variantLabel !== '') {
-            $item->addChild('g:size', $variantLabel, 'http://base.google.com/ns/1.0');
-            $item->addChild('g:title', $title . ' – Größe ' . $variantLabel, 'http://base.google.com/ns/1.0');
+    private function buildShipping(\SimpleXMLElement $item,$product,$price): \SimpleXMLElement
+    {
+        $shippingcost = 0;
+        # check sperrgut
+        $buausgab = $this->conn->getRepository(ProductsBuAusGab::class)->findOneBy(['id' => $product->getLAusgNr()]);
+        if($buausgab->getWarnId() == 'SPE'){
+            $shippingcost += 19.95;
         }
+        # normal shipping costs?
+        if($price['VK']['price'] < 99.95){
+            $shippingcost += 5.95;
+        }
+        $shipping = $item->addChild('g:shipping', null, 'http://base.google.com/ns/1.0');
+        $shipping->addChild('g:country', 'DE', 'http://base.google.com/ns/1.0');
+        $shipping->addChild('g:region', '', 'http://base.google.com/ns/1.0');
+        $shipping->addChild('g:service', '', 'http://base.google.com/ns/1.0');
+        $shipping->addChild('g:price', $shippingcost . ' EUR', 'http://base.google.com/ns/1.0');
+
+        return $shipping;
     }
 
     public function addProductOld(Products $product): void

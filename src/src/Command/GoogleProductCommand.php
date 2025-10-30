@@ -25,16 +25,24 @@ class GoogleProductCommand extends Command
         parent::__construct();
     }
 
+    protected function configure(): void
+    {
+        $this
+            ->addArgument('artikel_nr', InputArgument::OPTIONAL, 'Artikelnummer', null);
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
         $io->title('Google Product Command');
-        //$artikel_nr = $io->ask('Welche Artikelnummer?','30010086');
-        $artikel_nr = 30010036;
+        $artikel_nr = $input->getArgument('artikel_nr');
+        if (!$artikel_nr) {
+            $artikel_nr = $io->ask('Welche Artikelnummer?', '30010086');
+        }
         $em = $this->registry->getManager('cover');
         $products = $em->getRepository(Products::class)->findBy(['artikel_nr' => $artikel_nr],[],100,0);
         $io->section('Gefundene Einträge: ' . count($products) . ' für die Artikelnummer ' . $artikel_nr);
-        $googleMapper = new GoogleMapper();
+        $googleMapper = new GoogleMapper($em);
         foreach($products as $product){
             $googleMapper->addProduct($product);
         }
