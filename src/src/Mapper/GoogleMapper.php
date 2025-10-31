@@ -118,6 +118,9 @@ class GoogleMapper
         if($price['VK']['price'] < 99.95){
             $shippingcost += 5.95;
         }
+        if($product->getProductsC2Warts()[0]->getVersandkostgrp() == '12260'){
+            $shippingcost = 0;
+        }
         $shipping = $item->addChild('g:shipping', null, 'http://base.google.com/ns/1.0');
         $shipping->addChild('g:country', 'DE', 'http://base.google.com/ns/1.0');
         $shipping->addChild('g:region', '', 'http://base.google.com/ns/1.0');
