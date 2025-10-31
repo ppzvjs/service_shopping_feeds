@@ -21,8 +21,19 @@
                 <g:country>DE</g:country>
                 <g:region/>
                 <g:service/>
-                <g:price>5,95 EUR</g:price>
+                <g:price>5.95 EUR</g:price>
             </g:shipping>
+            <g:image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR.jpg</g:image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR-2.png
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR-3.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR-3.jpg
+            </g:additional_image_link>
         </item>
         <item>
             <g:id>BU-30010086-01-PPZ</g:id>
@@ -39,8 +50,19 @@
                 <g:country>DE</g:country>
                 <g:region/>
                 <g:service/>
-                <g:price>5,95 EUR</g:price>
+                <g:price>5.95 EUR</g:price>
             </g:shipping>
+            <g:image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR.jpg</g:image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR-2.png
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR-3.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-30010086-312-01-PPZ-GR-3.jpg
+            </g:additional_image_link>
         </item>
     </channel>
 </rss>

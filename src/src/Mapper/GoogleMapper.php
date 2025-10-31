@@ -76,7 +76,6 @@ class GoogleMapper
         $item->addChild('link', 'https://pareyshop.de/' . ltrim($link, '/'));
 
         // image (placeholder for now)
-        $item->addChild('g:image_link', 'https://pareyshop.de/media/catalog/product/default.jpg', 'http://base.google.com/ns/1.0');
 
         // availability
         $item->addChild('g:availability', 'in stock', 'http://base.google.com/ns/1.0');
@@ -116,6 +115,8 @@ class GoogleMapper
         $sku = $product->getProductsC2Warts()[0]->getSku();
         $urlBase = 'https://pareyshop.de/media/catalog/product/B/U/';
 
+        $suffix = ''; // will hold '', '_1', '_2', etc. once found
+
         foreach ($images as $key => $image) {
             $verwendTyp = trim($image->getVerwendTyp());
             $position   = $image->getPosition();
@@ -123,40 +124,51 @@ class GoogleMapper
 
             // Build base filename
             if ($key == 0) {
-                $baseFilename = $sku . '-' . $verwendTyp . '.' . $filetype;
+                $baseFilename = $sku . '-' . $verwendTyp;
             } else {
-                $baseFilename = $sku . '-' . $verwendTyp . '-' . $position . '.' . $filetype;
+                $baseFilename = $sku . '-' . $verwendTyp . '-' . $position;
             }
 
-            // Try base and numbered versions
-            $url = $urlBase . $baseFilename;
-            if (!self::isValidImage($url)) {
-                $maxAttempts = 10;
-                for ($i = 1; $i <= $maxAttempts; $i++) {
-                    $tryFilename = preg_replace(
-                        '/(\.' . preg_quote($filetype, '/') . ')$/',
-                        '_' . $i . '$1',
-                        $baseFilename
-                    );
+            // If suffix not yet known, detect it using the first valid image
+            if ($suffix === '') {
+                $testFilenames = [];
+                $testFilenames[] = $baseFilename . '.' . $filetype; // no suffix
+                for ($i = 1; $i <= 10; $i++) {
+                    $testFilenames[] = $baseFilename . '_' . $i . '.' . $filetype;
+                }
+
+                foreach ($testFilenames as $tryFilename) {
                     $tryUrl = $urlBase . $tryFilename;
                     if (self::isValidImage($tryUrl)) {
+                        // Found valid suffix pattern
+                        if (preg_match('/_(\d+)\.' . preg_quote($filetype, '/') . '$/', $tryFilename, $m)) {
+                            $suffix = '_' . $m[1];
+                        } else {
+                            $suffix = ''; // no suffix used
+                        }
                         $url = $tryUrl;
                         break;
                     }
                 }
+            } else {
+                // If suffix known, reuse it directly
+                $filename = $baseFilename . $suffix . '.' . $filetype;
+                $url = $urlBase . $filename;
+            }
+
+            // Fallback (if none found yet)
+            if (empty($url)) {
+                $url = $urlBase . $baseFilename . '.' . $filetype;
             }
 
             // Add to XML
             if ($key == 0) {
-                $item->addChild('g:image_link', $url, 'http://base.google.com/ns/1.0');
+                $item->addChild('g:image_link', trim($url), 'http://base.google.com/ns/1.0');
             } else {
-                $item->addChild('g:additional_image_link', $url, 'http://base.google.com/ns/1.0');
+                $item->addChild('g:additional_image_link', trim($url), 'http://base.google.com/ns/1.0');
             }
         }
     }
-
-    //https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR_1..jpg
-    //https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR_1.jpg
 
     /**
      * Check if URL exists and image is ≥ 300×300 px
@@ -167,7 +179,6 @@ class GoogleMapper
             return false;
         }
 
-        // Try to get remote image size
         $imageInfo = @getimagesize($url);
         if (!$imageInfo) {
             return false;
@@ -178,6 +189,7 @@ class GoogleMapper
 
         return ($width >= 300 && $height >= 300);
     }
+
 
 
     private function buildShipping(\SimpleXMLElement $item,$product,$price): \SimpleXMLElement
