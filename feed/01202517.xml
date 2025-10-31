@@ -20,6 +20,11 @@
                 <g:service/>
                 <g:price>0 EUR</g:price>
             </g:shipping>
+            <g:image_link>https://pareyshop.de/media/catalog/product/B/U/BU-01202517-0-01-PPZ-GR.jpg</g:image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-01202517-0-01-PPZ-GR-3.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-01202517-0-01-PPZ-GR-2.jpg
+            </g:additional_image_link>
         </item>
     </channel>
 </rss>

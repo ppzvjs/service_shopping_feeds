@@ -20,6 +20,23 @@
                 <g:service/>
                 <g:price>19.95 EUR</g:price>
             </g:shipping>
+            <g:image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR_1.jpg</g:image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-2_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-3_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-4_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-5_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-6_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-7_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-8_1.jpg
+            </g:additional_image_link>
+            <g:additional_image_link>https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR-9_1.jpg
+            </g:additional_image_link>
         </item>
     </channel>
 </rss>

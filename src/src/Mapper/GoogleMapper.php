@@ -5,6 +5,7 @@ namespace App\Mapper;
 use App\Entity\Cover\Products;
 use App\Entity\Cover\ProductsBuAusGab;
 use App\Entity\Cover\ProductsC2Wart;
+use App\Entity\Cover\ProductsC2Wartmed;
 
 class GoogleMapper
 {
@@ -104,7 +105,80 @@ class GoogleMapper
             }
         }
         $this->buildShipping($item,$product,$price);
+        $this->getImages($product,$item);
     }
+
+    private function getImages($product, $item) {
+        $cwart_lfdnr = $product->getProductsC2Warts()[0]->getLfdNr();
+        $images = $this->conn->getRepository(ProductsC2Wartmed::class)
+            ->findBy(['lfd_nr_c2wart' => $cwart_lfdnr], ['position' => 'ASC']);
+
+        $sku = $product->getProductsC2Warts()[0]->getSku();
+        $urlBase = 'https://pareyshop.de/media/catalog/product/B/U/';
+
+        foreach ($images as $key => $image) {
+            $verwendTyp = trim($image->getVerwendTyp());
+            $position   = $image->getPosition();
+            $filetype   = pathinfo($image->getDateiName(), PATHINFO_EXTENSION);
+
+            // Build base filename
+            if ($key == 0) {
+                $baseFilename = $sku . '-' . $verwendTyp . '.' . $filetype;
+            } else {
+                $baseFilename = $sku . '-' . $verwendTyp . '-' . $position . '.' . $filetype;
+            }
+
+            // Try base and numbered versions
+            $url = $urlBase . $baseFilename;
+            if (!self::isValidImage($url)) {
+                $maxAttempts = 10;
+                for ($i = 1; $i <= $maxAttempts; $i++) {
+                    $tryFilename = preg_replace(
+                        '/(\.' . preg_quote($filetype, '/') . ')$/',
+                        '_' . $i . '$1',
+                        $baseFilename
+                    );
+                    $tryUrl = $urlBase . $tryFilename;
+                    if (self::isValidImage($tryUrl)) {
+                        $url = $tryUrl;
+                        break;
+                    }
+                }
+            }
+
+            // Add to XML
+            if ($key == 0) {
+                $item->addChild('g:image_link', $url, 'http://base.google.com/ns/1.0');
+            } else {
+                $item->addChild('g:additional_image_link', $url, 'http://base.google.com/ns/1.0');
+            }
+        }
+    }
+
+    //https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR_1..jpg
+    //https://pareyshop.de/media/catalog/product/B/U/BU-35010842-0-01-PPZ-GR_1.jpg
+
+    /**
+     * Check if URL exists and image is ≥ 300×300 px
+     */
+    private static function isValidImage(string $url): bool {
+        $headers = @get_headers($url, 1);
+        if (!$headers || strpos($headers[0], '200') === false) {
+            return false;
+        }
+
+        // Try to get remote image size
+        $imageInfo = @getimagesize($url);
+        if (!$imageInfo) {
+            return false;
+        }
+
+        $width  = $imageInfo[0];
+        $height = $imageInfo[1];
+
+        return ($width >= 300 && $height >= 300);
+    }
+
 
     private function buildShipping(\SimpleXMLElement $item,$product,$price): \SimpleXMLElement
     {
