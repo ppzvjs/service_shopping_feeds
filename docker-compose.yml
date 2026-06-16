@@ -48,6 +48,15 @@ services:
     volumes:
       - ./src:/var/www/html
       - ./feed:/opt/feed
+    entrypoint: [ 'php', '/var/www/html/bin/console' ]
+
+  debug:
+    build:
+      context: ./apache
+      dockerfile: apache.dockerfile
+    volumes:
+      - ./src:/var/www/html
+      - ./feed:/opt/feed
       - ./apache/conf/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
     environment:
       XDEBUG_MODE: debug

@@ -1,0 +1,94 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Mysql\FeedConfig;
+use App\Entity\Mysql\FeedBlacklist;
+use App\Entity\Mysql\ShippingRule;
+use App\Form\FeedConfigType;
+use App\Form\FeedBlacklistType;
+use App\Form\ShippingRuleType;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+#[Route('/feed-manager')]
+class FeedManagerController extends AbstractController
+{
+    public function __construct(
+        private EntityManagerInterface $mysqlEntityManager
+    ) {}
+
+    #[Route('', name: 'app_feed_manager', methods: ['GET', 'POST'])]
+    public function index(Request $request): Response
+    {
+        // 1. Feed Config (Gibt es schon einen Eintrag? Wenn nicht, neu anlegen)
+        $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->findOneBy([]) ?? new FeedConfig();
+        $configForm = $this->createForm(FeedConfigType::class, $config);
+        $configForm->handleRequest($request);
+
+        if ($configForm->isSubmitted() && $configForm->isValid()) {
+            $this->mysqlEntityManager->persist($config);
+            $this->mysqlEntityManager->flush();
+            $this->addFlash('success', 'Feed-URL aktualisiert.');
+            return $this->redirectToRoute('app_feed_manager');
+        }
+
+        // 2. Blacklist Form
+        $blacklistEntry = new FeedBlacklist();
+        $blacklistForm = $this->createForm(FeedBlacklistType::class, $blacklistEntry);
+        $blacklistForm->handleRequest($request);
+
+        if ($blacklistForm->isSubmitted() && $blacklistForm->isValid()) {
+            $this->mysqlEntityManager->persist($blacklistEntry);
+            $this->mysqlEntityManager->flush();
+            $this->addFlash('success', 'Artikelnummer blockiert.');
+            return $this->redirectToRoute('app_feed_manager');
+        }
+
+        // 3. Shipping Rule Form
+        $shippingRule = new ShippingRule();
+        $shippingForm = $this->createForm(ShippingRuleType::class, $shippingRule);
+        $shippingForm->handleRequest($request);
+
+        if ($shippingForm->isSubmitted() && $shippingForm->isValid()) {
+            $this->mysqlEntityManager->persist($shippingRule);
+            $this->mysqlEntityManager->flush();
+            $this->addFlash('success', 'Versandkosten-Regel hinzugefügt.');
+            return $this->redirectToRoute('app_feed_manager');
+        }
+
+        // Daten für die Tabellen laden
+        $blacklist = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findAll();
+        $shippingRules = $this->mysqlEntityManager->getRepository(ShippingRule::class)->findBy([], ['minPrice' => 'ASC']);
+
+        return $this->render('feed_manager/index.html.twig', [
+            'configForm' => $configForm->createView(),
+            'blacklistForm' => $blacklistForm->createView(),
+            'shippingForm' => $shippingForm->createView(),
+            'blacklist' => $blacklist,
+            'shippingRules' => $shippingRules,
+            'currentUrl' => $config->getFeedUrl()
+        ]);
+    }
+
+    #[Route('/delete-blacklist/{id}', name: 'app_feed_delete_blacklist', methods: ['POST'])]
+    public function deleteBlacklist(FeedBlacklist $item): Response
+    {
+        $this->mysqlEntityManager->remove($item);
+        $this->mysqlEntityManager->flush();
+        $this->addFlash('success', 'Eintrag aus Blacklist entfernt.');
+        return $this->redirectToRoute('app_feed_manager');
+    }
+
+    #[Route('/delete-shipping/{id}', name: 'app_feed_delete_shipping', methods: ['POST'])]
+    public function deleteShipping(ShippingRule $rule): Response
+    {
+        $this->mysqlEntityManager->remove($rule);
+        $this->mysqlEntityManager->flush();
+        $this->addFlash('success', 'Versandregel entfernt.');
+        return $this->redirectToRoute('app_feed_manager');
+    }
+}
