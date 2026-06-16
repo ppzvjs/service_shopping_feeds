@@ -4,7 +4,7 @@ namespace App\Service;
 
 use App\Entity\Mysql\Product;
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlacklist;
+use App\Entity\Mysql\FeedBlackList;
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,7 +25,7 @@ class FeedImporter
         $feedUrl = $config->getFeedUrl();
 
         // 2. Blacklist gefiltert nach diesem Feed laden & aufteilen
-        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findBy(['feed' => $config]);
+        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlackList::class)->findBy(['feed' => $config]);
 
         $exactBlacklist = [];
         $wildcardBlacklist = [];
