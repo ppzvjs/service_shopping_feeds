@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlacklist;
+use App\Entity\Mysql\FeedBlackList;
 use App\Entity\Mysql\ShippingRule;
 use App\Form\FeedConfigType;
 use App\Form\FeedBlacklistType;
