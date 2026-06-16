@@ -1,0 +1,33 @@
+# In fast allen produktiven Umgebungen ist +FollowSymLinks zwingend erforderlich
+Options +FollowSymLinks
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bestimmen des Base-Pfads (wichtig, falls das Projekt in einem Unterordner läuft)
+    # Wenn es direkt auf der Domain läuft, bleibt es bei /
+    RewriteCond %{REQUEST_URI}::$1 ^(/.+)/(.*)::\2$
+    RewriteRule ^(.*) - [E=BASE:%1]
+
+    # Setzen des HTTP_AUTHORIZATION Headers (wichtig für API-Schnittstellen/Basic Auth)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Wenn die index.php direkt aufgerufen wird, redirecten wir auf die saubere URL ohne index.php
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule ^index\.php(?:/(.*)|$) %{ENV:BASE}/$1 [R=301,L]
+
+    # Wenn die angeforderte URL KEINE existierende Datei oder kein existierender Ordner ist...
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-p
+    RewriteCond %{REQUEST_FILENAME} !-d
+    # ...dann leite die Anfrage intern an die index.php weiter!
+    RewriteRule ^(.*)$ %{ENV:BASE}/index.php [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    <IfModule mod_alias.c>
+        # Fallback, falls mod_rewrite auf dem Server komplett deaktiviert ist
+        RedirectMatch 302 ^/$ /index.php/
+    </IfModule>
+</IfModule>

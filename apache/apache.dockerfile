@@ -37,8 +37,10 @@ RUN pecl install xdebug \
 COPY conf/app.conf /etc/apache2/sites-available/app.conf
 
 # Enable site and SSL
-RUN a2ensite app \
- && a2enmod ssl && a2enmod rewrite
+RUN a2dissite 000-default \
+ && a2ensite app \
+ && a2enmod ssl \
+ && a2enmod rewrite
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
