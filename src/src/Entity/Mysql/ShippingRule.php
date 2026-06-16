@@ -19,6 +19,10 @@ class ShippingRule
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     private ?string $shippingCost = '0.00'; // Was soll es dann kosten?
 
+    #[ORM\ManyToOne(targetEntity: FeedConfig::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private ?FeedConfig $feed = null;
+
     public function getId(): ?int { return $this->id; }
 
     public function getMinPrice(): float { return (float)$this->minPrice; }
@@ -26,4 +30,7 @@ class ShippingRule
 
     public function getShippingCost(): float { return (float)$this->shippingCost; }
     public function setShippingCost(float $shippingCost): self { $this->shippingCost = (string)$shippingCost; return $this; }
+
+    public function getFeed(): ?FeedConfig { return $this->feed; }
+    public function setFeed(?FeedConfig $feed): self { $this->feed = $feed; return $this; }
 }

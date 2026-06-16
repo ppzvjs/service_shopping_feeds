@@ -15,17 +15,17 @@ class FeedImporter
         private EntityManagerInterface $mysqlEntityManager
     ) {}
 
-    public function import(): array
+    public function import(int $feedId): array
     {
-        // 1. Feed-URL aus der Datenbank holen
-        $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->findOneBy([]);
+        // 1. Spezifischen Feed aus der Datenbank holen
+        $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->find($feedId);
         if (!$config || !$config->getFeedUrl()) {
-            throw new \Exception('Keine Feed-URL im Dashboard hinterlegt!');
+            throw new \Exception('Der angeforderte Feed existiert nicht oder hat keine URL hinterlegt!');
         }
         $feedUrl = $config->getFeedUrl();
 
-        // 2. Blacklist aus der Datenbank laden & aufteilen
-        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findAll();
+        // 2. Blacklist gefiltert nach diesem Feed laden & aufteilen
+        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findBy(['feed' => $config]);
 
         $exactBlacklist = [];
         $wildcardBlacklist = [];
@@ -42,10 +42,10 @@ class FeedImporter
             }
         }
 
-        // 3. Versandkosten-Regeln & Gratis-Versand-Ausnahmen laden
-        $shippingRules = $this->mysqlEntityManager->getRepository(ShippingRule::class)->findBy([], ['minPrice' => 'DESC']);
+        // 3. Versandkosten-Regeln & Gratis-Versand-Ausnahmen gefiltert nach diesem Feed laden
+        $shippingRules = $this->mysqlEntityManager->getRepository(ShippingRule::class)->findBy(['feed' => $config], ['minPrice' => 'DESC']);
 
-        $freeShippingEntries = $this->mysqlEntityManager->getRepository(FreeShippingRule::class)->findAll();
+        $freeShippingEntries = $this->mysqlEntityManager->getRepository(FreeShippingRule::class)->findBy(['feed' => $config]);
 
         $exactFreeShipping = [];
         $wildcardFreeShipping = [];
@@ -98,7 +98,8 @@ class FeedImporter
             }
 
             if ($isBlacklisted) {
-                $existingProduct = $productRepository->findOneBy(['remoteId' => $remoteId]);
+                // Falls das Produkt früher mal in diesem Feed importiert wurde -> löschen
+                $existingProduct = $productRepository->findOneBy(['remoteId' => $remoteId, 'feed' => $config]);
                 if ($existingProduct) {
                     $this->mysqlEntityManager->remove($existingProduct);
                     $stats['deleted']++;
@@ -109,8 +110,8 @@ class FeedImporter
 
             $currentFeedIds[] = $remoteId;
 
-            // Upsert-Logik
-            $product = $productRepository->findOneBy(['remoteId' => $remoteId]);
+            // --- UPSERT-LOGIK (FÜR MULTI-FEED KORRIGIERT) ---
+            $product = $productRepository->findOneBy(['remoteId' => $remoteId, 'feed' => $config]);
             if ($product) {
                 $stats['updated']++;
             } else {
@@ -118,6 +119,9 @@ class FeedImporter
                 $product->setRemoteId($remoteId);
                 $stats['inserted']++;
             }
+
+            // WICHTIG: Die Feed-Zuweisung MUSS immer stattfinden, um NULL-Exceptions zu verhindern
+            $product->setFeed($config);
 
             // Preise parsen
             $priceRaw = (string) $googleNamespace->price;
@@ -166,16 +170,14 @@ class FeedImporter
                 $shippingPriceRaw = '0.00';
                 if (isset($googleNamespace->shipping)) {
                     $shippingNamespace = $googleNamespace->shipping->children('g', true);
-                    $shippingPriceRaw = (string) $shippingNamespace->price; // Holt z.B. "5,95 EUR"
+                    $shippingPriceRaw = (string) $shippingNamespace->price;
                 }
 
-                // BOMBENSICHERES PARSEN: Komma durch Punkt ersetzen, alles außer Zahlen und Punkt löschen
                 $shippingPriceCleaned = str_replace(',', '.', $shippingPriceRaw);
                 $shippingPriceCleaned = preg_replace('/[^0-9.]/', '', $shippingPriceCleaned);
                 $finalShippingCost = $shippingPriceCleaned !== '' ? (float)$shippingPriceCleaned : 0.00;
             }
 
-            // ZUERST den Wert ins Objekt schreiben!
             $product->setShippingCost($finalShippingCost);
 
             // Restliche Standarddaten befüllen
@@ -206,17 +208,24 @@ class FeedImporter
             if (($stats['processed'] % 50) === 0) {
                 $this->mysqlEntityManager->flush();
                 $this->mysqlEntityManager->clear();
+                // Nach dem clear() müssen wir das Repository und die Config neu an den EM binden
                 $productRepository = $this->mysqlEntityManager->getRepository(Product::class);
+                $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->find($feedId);
             }
         }
 
         $this->mysqlEntityManager->flush();
         $this->mysqlEntityManager->clear();
 
+        // --- BEREINIGUNG: Nur alte Artikel DIESES Feeds löschen ---
         if (!empty($currentFeedIds)) {
+            // Re-bind der Config für das DQL-Query nach dem letzten clear()
+            $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->find($feedId);
+
             $query = $this->mysqlEntityManager->createQuery(
-                'DELETE FROM App\Entity\Mysql\Product p WHERE p.remoteId NOT IN (:currentIds)'
-            )->setParameter('currentIds', $currentFeedIds);
+                'DELETE FROM App\Entity\Mysql\Product p WHERE p.feed = :feed AND p.remoteId NOT IN (:currentIds)'
+            )->setParameter('feed', $config)
+                ->setParameter('currentIds', $currentFeedIds);
             $stats['deleted'] += $query->execute();
         }
 

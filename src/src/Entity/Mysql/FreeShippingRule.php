@@ -15,7 +15,14 @@ class FreeShippingRule
     #[ORM\Column(length: 255, unique: true)]
     private ?string $skuPattern = null; // Hier landet die SKU oder die Wildcard (z.B. BU-30010*)
 
+    #[ORM\ManyToOne(targetEntity: FeedConfig::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private ?FeedConfig $feed = null;
+
     public function getId(): ?int { return $this->id; }
     public function getSkuPattern(): ?string { return $this->skuPattern; }
     public function setSkuPattern(string $skuPattern): self { $this->skuPattern = $skuPattern; return $this; }
+
+    public function getFeed(): ?FeedConfig { return $this->feed; }
+    public function setFeed(?FeedConfig $feed): self { $this->feed = $feed; return $this; }
 }
