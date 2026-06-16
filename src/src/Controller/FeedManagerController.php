@@ -4,9 +4,11 @@ namespace App\Controller;
 
 use App\Entity\Mysql\FeedConfig;
 use App\Entity\Mysql\FeedBlackList;
+use App\Entity\Mysql\FreeShippingRule;
 use App\Entity\Mysql\ShippingRule;
 use App\Form\FeedConfigType;
 use App\Form\FeedBlacklistType;
+use App\Form\FreeShippingRuleType;
 use App\Form\ShippingRuleType;
 use App\Service\FeedImporter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -61,16 +63,31 @@ class FeedManagerController extends AbstractController
             return $this->redirectToRoute('app_feed_manager');
         }
 
-        // Daten für die Tabellen laden
+        // 4. NEU: Free Shipping Form
+        $freeShippingRule = new FreeShippingRule();
+        $freeShippingForm = $this->createForm(FreeShippingRuleType::class, $freeShippingRule);
+        $freeShippingForm->handleRequest($request);
+
+        if ($freeShippingForm->isSubmitted() && $freeShippingForm->isValid()) {
+            $this->mysqlEntityManager->persist($freeShippingRule);
+            $this->mysqlEntityManager->flush();
+            $this->addFlash('success', 'Versandkosten-Ausnahme hinzugefügt.');
+            return $this->redirectToRoute('app_feed_manager');
+        }
+
+        // Daten für Twig laden
         $blacklist = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findAll();
         $shippingRules = $this->mysqlEntityManager->getRepository(ShippingRule::class)->findBy([], ['minPrice' => 'ASC']);
+        $freeShippingRules = $this->mysqlEntityManager->getRepository(FreeShippingRule::class)->findAll(); // NEU
 
         return $this->render('feed_manager/index.html.twig', [
             'configForm' => $configForm->createView(),
             'blacklistForm' => $blacklistForm->createView(),
             'shippingForm' => $shippingForm->createView(),
+            'freeShippingForm' => $freeShippingForm->createView(), // NEU
             'blacklist' => $blacklist,
             'shippingRules' => $shippingRules,
+            'freeShippingRules' => $freeShippingRules, // NEU
             'currentUrl' => $config->getFeedUrl()
         ]);
     }
@@ -113,6 +130,15 @@ class FeedManagerController extends AbstractController
             $this->addFlash('error', 'Fehler beim Import: ' . $e->getMessage());
         }
 
+        return $this->redirectToRoute('app_feed_manager');
+    }
+
+    #[Route('/delete-free-shipping/{id}', name: 'app_feed_delete_free_shipping', methods: ['POST'])]
+    public function deleteFreeShipping(FreeShippingRule $rule): Response
+    {
+        $this->mysqlEntityManager->remove($rule);
+        $this->mysqlEntityManager->flush();
+        $this->addFlash('success', 'Ausnahme entfernt.');
         return $this->redirectToRoute('app_feed_manager');
     }
 }

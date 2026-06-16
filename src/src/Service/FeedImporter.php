@@ -4,8 +4,9 @@ namespace App\Service;
 
 use App\Entity\Mysql\Product;
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlackList;
+use App\Entity\Mysql\FeedBlacklist;
 use App\Entity\Mysql\ShippingRule;
+use App\Entity\Mysql\FreeShippingRule;
 use Doctrine\ORM\EntityManagerInterface;
 
 class FeedImporter
@@ -23,13 +24,45 @@ class FeedImporter
         }
         $feedUrl = $config->getFeedUrl();
 
-        // 2. Blacklist & Versandregeln aus der Datenbank laden
-        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlackList::class)->findAll();
-        $blacklistedSkus = array_map(fn($item) => $item->getSku(), $blacklistEntries);
+        // 2. Blacklist aus der Datenbank laden & aufteilen
+        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findAll();
 
+        $exactBlacklist = [];
+        $wildcardBlacklist = [];
+
+        foreach ($blacklistEntries as $entry) {
+            $skuPattern = trim($entry->getSku());
+            if ($skuPattern === '') {
+                continue;
+            }
+            if (str_contains($skuPattern, '*')) {
+                $wildcardBlacklist[] = $skuPattern;
+            } else {
+                $exactBlacklist[] = $skuPattern;
+            }
+        }
+
+        // 3. Versandkosten-Regeln & Gratis-Versand-Ausnahmen laden
         $shippingRules = $this->mysqlEntityManager->getRepository(ShippingRule::class)->findBy([], ['minPrice' => 'DESC']);
 
-        // 3. XML laden
+        $freeShippingEntries = $this->mysqlEntityManager->getRepository(FreeShippingRule::class)->findAll();
+
+        $exactFreeShipping = [];
+        $wildcardFreeShipping = [];
+
+        foreach ($freeShippingEntries as $entry) {
+            $pattern = trim($entry->getSkuPattern());
+            if ($pattern === '') {
+                continue;
+            }
+            if (str_contains($pattern, '*')) {
+                $wildcardFreeShipping[] = $pattern;
+            } else {
+                $exactFreeShipping[] = $pattern;
+            }
+        }
+
+        // 4. XML laden
         libxml_use_internal_errors(true);
         $xml = simplexml_load_file($feedUrl);
         if ($xml === false) {
@@ -51,18 +84,29 @@ class FeedImporter
             }
 
             // --- REGEL 1: BLACKLIST CHECK ---
-            if (in_array($remoteId, $blacklistedSkus, true)) {
-                // Falls das Produkt früher mal importiert wurde, jetzt aber auf der Blacklist steht -> aus DB löschen
+            $isBlacklisted = false;
+
+            if (in_array($remoteId, $exactBlacklist, true)) {
+                $isBlacklisted = true;
+            } else {
+                foreach ($wildcardBlacklist as $pattern) {
+                    if (fnmatch($pattern, $remoteId)) {
+                        $isBlacklisted = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($isBlacklisted) {
                 $existingProduct = $productRepository->findOneBy(['remoteId' => $remoteId]);
                 if ($existingProduct) {
                     $this->mysqlEntityManager->remove($existingProduct);
                     $stats['deleted']++;
                 }
                 $stats['blacklisted']++;
-                continue; // Überspringen, nicht speichern!
+                continue;
             }
 
-            // Gütige ID für die spätere Bereinigung am Ende merken
             $currentFeedIds[] = $remoteId;
 
             // Upsert-Logik
@@ -89,28 +133,49 @@ class FeedImporter
             }
 
             // --- REGEL 2: VERSANDKOSTEN ANPASSEN ---
-            // Wir nehmen den aktuell gültigen Preis (Angebot oder Normalpreis) als Basis
             $activePrice = $product->getActivePrice();
             $finalShippingCost = null;
 
-            // Wir gehen die Regeln durch (da nach minPrice DESC sortiert, greift die höchste passende Regel zuerst)
-            foreach ($shippingRules as $rule) {
-                if ($activePrice >= $rule->getMinPrice()) {
-                    $finalShippingCost = $rule->getShippingCost();
-                    break; // Passende Regel gefunden, Schleife abbrechen
+            // Schritt A1: Exakter Abgleich für Gratis-Versand
+            if (in_array($remoteId, $exactFreeShipping, true)) {
+                $finalShippingCost = 0.00;
+            }
+
+            // Schritt A2: Wildcard-Abgleich für Gratis-Versand
+            if ($finalShippingCost === null && !empty($wildcardFreeShipping)) {
+                foreach ($wildcardFreeShipping as $pattern) {
+                    if (fnmatch($pattern, $remoteId)) {
+                        $finalShippingCost = 0.00;
+                        break;
+                    }
                 }
             }
 
-            // Falls KEINE Regel zutrifft, nehmen wir die originalen Versandkosten aus dem Feed
+            // Schritt B: Preis-Staffeln prüfen
+            if ($finalShippingCost === null) {
+                foreach ($shippingRules as $rule) {
+                    if ($activePrice >= $rule->getMinPrice()) {
+                        $finalShippingCost = $rule->getShippingCost();
+                        break;
+                    }
+                }
+            }
+
+            // Schritt C: Fallback auf originalen Feed (Komma-gesichert!)
             if ($finalShippingCost === null) {
                 $shippingPriceRaw = '0.00';
                 if (isset($googleNamespace->shipping)) {
                     $shippingNamespace = $googleNamespace->shipping->children('g', true);
-                    $shippingPriceRaw = (string) $shippingNamespace->price;
+                    $shippingPriceRaw = (string) $shippingNamespace->price; // Holt z.B. "5,95 EUR"
                 }
-                $shippingPriceReady = str_replace(',', '.', $shippingPriceRaw);
-                $finalShippingCost = (float) filter_var($shippingPriceReady, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+
+                // BOMBENSICHERES PARSEN: Komma durch Punkt ersetzen, alles außer Zahlen und Punkt löschen
+                $shippingPriceCleaned = str_replace(',', '.', $shippingPriceRaw);
+                $shippingPriceCleaned = preg_replace('/[^0-9.]/', '', $shippingPriceCleaned);
+                $finalShippingCost = $shippingPriceCleaned !== '' ? (float)$shippingPriceCleaned : 0.00;
             }
+
+            // ZUERST den Wert ins Objekt schreiben!
             $product->setShippingCost($finalShippingCost);
 
             // Restliche Standarddaten befüllen
@@ -148,7 +213,6 @@ class FeedImporter
         $this->mysqlEntityManager->flush();
         $this->mysqlEntityManager->clear();
 
-        // --- BEREINIGUNG: Artikel löschen, die gar nicht mehr im Feed sind ---
         if (!empty($currentFeedIds)) {
             $query = $this->mysqlEntityManager->createQuery(
                 'DELETE FROM App\Entity\Mysql\Product p WHERE p.remoteId NOT IN (:currentIds)'
