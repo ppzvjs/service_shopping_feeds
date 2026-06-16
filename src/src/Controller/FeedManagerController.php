@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlacklist;
+use App\Entity\Mysql\FeedBlackList;
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use App\Entity\Mysql\Product;
@@ -74,7 +74,7 @@ class FeedManagerController extends AbstractController
         }
 
         // --- FORMULAR C: BLACKLIST FÜR AKTIVEN FEED ---
-        $blacklist = new FeedBlacklist();
+        $blacklist = new FeedBlackList();
         $blacklistForm = $this->container->get('form.factory')->createNamedBuilder('blacklist_form', FormType::class, $blacklist)
             ->add('sku', TextType::class, ['label' => 'SKU / ID oder Wildcard (z.B. BU-*)'])
             ->getForm();
