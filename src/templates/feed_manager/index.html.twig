@@ -19,7 +19,7 @@
                 <p style="margin: 0; color: #555;">Aktuelle URL: <code style="background:#fff; padding:2px 4px;">{{ currentUrl|default('Keine URL hinterlegt') }}</code></p>
             </div>
             {# Diesen Button verknüpfen wir gleich im nächsten Schritt #}
-            <form action="#" method="POST">
+            <form action="{{ path('app_feed_run_import') }}" method="POST">
                 <button type="submit" style="background: #1e88e5; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; cursor: pointer;">
                     🔄 Jetzt synchronisieren
                 </button>

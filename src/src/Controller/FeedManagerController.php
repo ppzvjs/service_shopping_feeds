@@ -8,6 +8,7 @@ use App\Entity\Mysql\ShippingRule;
 use App\Form\FeedConfigType;
 use App\Form\FeedBlacklistType;
 use App\Form\ShippingRuleType;
+use App\Service\FeedImporter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -89,6 +90,29 @@ class FeedManagerController extends AbstractController
         $this->mysqlEntityManager->remove($rule);
         $this->mysqlEntityManager->flush();
         $this->addFlash('success', 'Versandregel entfernt.');
+        return $this->redirectToRoute('app_feed_manager');
+    }
+
+    #[Route('/run-import', name: 'app_feed_run_import', methods: ['POST'])]
+    public function runImport(FeedImporter $feedImporter): Response
+    {
+        try {
+            // Hier rufen wir den soeben erstellten Service auf
+            $stats = $feedImporter->import();
+
+            $this->addFlash('success', sprintf(
+                'Synchronisierung erfolgreich! %d Artikel im Feed verarbeitet (%d neu, %d aktualisiert). %d Blacklist-Treffer ignoriert. %d alte Artikel aus DB gelöscht.',
+                $stats['processed'],
+                $stats['inserted'],
+                $stats['updated'],
+                $stats['blacklisted'],
+                $stats['deleted']
+            ));
+
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Fehler beim Import: ' . $e->getMessage());
+        }
+
         return $this->redirectToRoute('app_feed_manager');
     }
 }
