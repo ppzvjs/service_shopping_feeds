@@ -4,7 +4,7 @@ namespace App\Service;
 
 use App\Entity\Mysql\Product;
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlackList;
+use App\Entity\Mysql\FeedBlacklist;
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,7 +25,7 @@ class FeedImporter
         $feedUrl = $config->getFeedUrl();
 
         // 2. Blacklist gefiltert nach diesem Feed laden & aufteilen
-        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlackList::class)->findBy(['feed' => $config]);
+        $blacklistEntries = $this->mysqlEntityManager->getRepository(FeedBlacklist::class)->findBy(['feed' => $config]);
 
         $exactBlacklist = [];
         $wildcardBlacklist = [];
@@ -98,7 +98,6 @@ class FeedImporter
             }
 
             if ($isBlacklisted) {
-                // Falls das Produkt früher mal in diesem Feed importiert wurde -> löschen
                 $existingProduct = $productRepository->findOneBy(['remoteId' => $remoteId, 'feed' => $config]);
                 if ($existingProduct) {
                     $this->mysqlEntityManager->remove($existingProduct);
@@ -110,7 +109,7 @@ class FeedImporter
 
             $currentFeedIds[] = $remoteId;
 
-            // --- UPSERT-LOGIK (FÜR MULTI-FEED KORRIGIERT) ---
+            // --- UPSERT-LOGIK ---
             $product = $productRepository->findOneBy(['remoteId' => $remoteId, 'feed' => $config]);
             if ($product) {
                 $stats['updated']++;
@@ -120,10 +119,9 @@ class FeedImporter
                 $stats['inserted']++;
             }
 
-            // WICHTIG: Die Feed-Zuweisung MUSS immer stattfinden, um NULL-Exceptions zu verhindern
             $product->setFeed($config);
 
-            // Preise parsen
+            // --- PREISE PARSEN ---
             $priceRaw = (string) $googleNamespace->price;
             $price = (float) filter_var($priceRaw, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $product->setPrice($price);
@@ -136,8 +134,28 @@ class FeedImporter
                 $product->setSalePrice(null);
             }
 
-            // --- REGEL 2: VERSANDKOSTEN ANPASSEN ---
+            // --- REGEL 1b: PREISSPANNE PRÜFEN (VON / BIS) ---
             $activePrice = $product->getActivePrice();
+            $isOutOfPriceRange = false;
+
+            if ($config->getMinProductPrice() !== null && $activePrice < $config->getMinProductPrice()) {
+                $isOutOfPriceRange = true;
+            }
+            if ($config->getMaxProductPrice() !== null && $activePrice > $config->getMaxProductPrice()) {
+                $isOutOfPriceRange = true;
+            }
+
+            if ($isOutOfPriceRange) {
+                $existingProduct = $productRepository->findOneBy(['remoteId' => $remoteId, 'feed' => $config]);
+                if ($existingProduct) {
+                    $this->mysqlEntityManager->remove($existingProduct);
+                    $stats['deleted']++;
+                }
+                $stats['blacklisted']++;
+                continue;
+            }
+
+            // --- REGEL 2: VERSANDKOSTEN ANPASSEN ---
             $finalShippingCost = null;
 
             // Schritt A1: Exakter Abgleich für Gratis-Versand
@@ -165,7 +183,7 @@ class FeedImporter
                 }
             }
 
-            // Schritt C: Fallback auf originalen Feed (Komma-gesichert!)
+            // Schritt C: Fallback auf originalen Feed
             if ($finalShippingCost === null) {
                 $shippingPriceRaw = '0.00';
                 if (isset($googleNamespace->shipping)) {
@@ -208,7 +226,6 @@ class FeedImporter
             if (($stats['processed'] % 50) === 0) {
                 $this->mysqlEntityManager->flush();
                 $this->mysqlEntityManager->clear();
-                // Nach dem clear() müssen wir das Repository und die Config neu an den EM binden
                 $productRepository = $this->mysqlEntityManager->getRepository(Product::class);
                 $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->find($feedId);
             }
@@ -217,9 +234,8 @@ class FeedImporter
         $this->mysqlEntityManager->flush();
         $this->mysqlEntityManager->clear();
 
-        // --- BEREINIGUNG: Nur alte Artikel DIESES Feeds löschen ---
+        // --- BEREINIGUNG ---
         if (!empty($currentFeedIds)) {
-            // Re-bind der Config für das DQL-Query nach dem letzten clear()
             $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->find($feedId);
 
             $query = $this->mysqlEntityManager->createQuery(

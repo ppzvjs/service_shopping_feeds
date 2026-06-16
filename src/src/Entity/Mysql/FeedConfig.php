@@ -20,9 +20,37 @@ class FeedConfig
     #[ORM\Column(type: 'text')]
     private ?string $feedUrl = null;
 
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $minProductPrice = null;
+
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $maxProductPrice = null;
+
     public function getId(): ?int { return $this->id; }
     public function getName(): ?string { return $this->name; }
     public function setName(string $name): self { $this->name = $name; return $this; }
     public function getFeedUrl(): ?string { return $this->feedUrl; }
     public function setFeedUrl(string $feedUrl): self { $this->feedUrl = $feedUrl; return $this; }
+
+    public function getMinProductPrice(): ?float
+    {
+        return $this->minProductPrice !== null ? (float)$this->minProductPrice : null;
+    }
+
+    public function setMinProductPrice(?float $minProductPrice): self
+    {
+        $this->minProductPrice = $minProductPrice !== null ? (string)$minProductPrice : null;
+        return $this;
+    }
+
+    public function getMaxProductPrice(): ?float
+    {
+        return $this->maxProductPrice !== null ? (float)$this->maxProductPrice : null;
+    }
+
+    public function setMaxProductPrice(?float $maxProductPrice): self
+    {
+        $this->maxProductPrice = $maxProductPrice !== null ? (string)$maxProductPrice : null;
+        return $this;
+    }
 }

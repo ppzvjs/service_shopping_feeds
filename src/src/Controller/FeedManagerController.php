@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlackList;
+use App\Entity\Mysql\FeedBlacklist;
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use App\Entity\Mysql\Product;
@@ -42,6 +42,8 @@ class FeedManagerController extends AbstractController
         $addFeedForm = $this->container->get('form.factory')->createNamedBuilder('add_feed_form', FormType::class, $newFeed)
             ->add('name', TextType::class, ['label' => 'Feed-Name (z.B. DE / AT)'])
             ->add('feedUrl', UrlType::class, ['label' => 'Google Shopping XML URL'])
+            ->add('minProductPrice', NumberType::class, ['label' => 'Min. Preis (€)', 'required' => false])
+            ->add('maxProductPrice', NumberType::class, ['label' => 'Max. Preis (€)', 'required' => false])
             ->getForm();
 
         $addFeedForm->handleRequest($request);
@@ -64,17 +66,19 @@ class FeedManagerController extends AbstractController
         // --- FORMULAR B: BESTEHENDEN FEED BEARBEITEN ---
         $configForm = $this->container->get('form.factory')->createNamedBuilder('config_form', FormType::class, $activeFeed)
             ->add('feedUrl', UrlType::class, ['label' => 'URL bearbeiten'])
+            ->add('minProductPrice', NumberType::class, ['label' => 'Min. Preis (€)', 'required' => false])
+            ->add('maxProductPrice', NumberType::class, ['label' => 'Max. Preis (€)', 'required' => false])
             ->getForm();
 
         $configForm->handleRequest($request);
         if ($configForm->isSubmitted() && $configForm->isValid()) {
             $em->flush();
-            $this->addFlash('success', 'Feed-URL wurde aktualisiert.');
+            $this->addFlash('success', 'Feed-Einstellungen wurden aktualisiert.');
             return $this->redirectToRoute('app_feed_manager', ['active_feed' => $activeFeed->getId()]);
         }
 
         // --- FORMULAR C: BLACKLIST FÜR AKTIVEN FEED ---
-        $blacklist = new FeedBlackList();
+        $blacklist = new FeedBlacklist();
         $blacklistForm = $this->container->get('form.factory')->createNamedBuilder('blacklist_form', FormType::class, $blacklist)
             ->add('sku', TextType::class, ['label' => 'SKU / ID oder Wildcard (z.B. BU-*)'])
             ->getForm();
@@ -143,10 +147,15 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('run/{id}', name: 'app_feed_run_import', methods: ['POST'])]
-    public function runImport(int $id, FeedImporter $importer): Response
+    public function runImport(int $id, FeedImporter $importer, Request $request): Response
     {
         try {
             $stats = $importer->import($id);
+
+            // Werte für die Infoboxen dauerhaft für diesen Feed in der Session merken
+            $session = $request->getSession();
+            $session->set('last_sync_total_' . $id, $stats['processed'] + $stats['blacklisted']);
+
             $this->addFlash('success', sprintf(
                 'Import erfolgreich! Verarbeitet: %d | Neu: %d | Aktualisiert: %d | Blacklisted: %d | Gelöscht: %d',
                 $stats['processed'], $stats['inserted'], $stats['updated'], $stats['blacklisted'], $stats['deleted']
