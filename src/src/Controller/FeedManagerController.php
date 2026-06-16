@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Mysql\FeedConfig;
-use App\Entity\Mysql\FeedBlacklist;
+use App\Entity\Mysql\FeedBlackList;
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use App\Entity\Mysql\Product;
@@ -78,7 +78,7 @@ class FeedManagerController extends AbstractController
         }
 
         // --- FORMULAR C: BLACKLIST FÜR AKTIVEN FEED ---
-        $blacklist = new FeedBlacklist();
+        $blacklist = new FeedBlackList();
         $blacklistForm = $this->container->get('form.factory')->createNamedBuilder('blacklist_form', FormType::class, $blacklist)
             ->add('sku', TextType::class, ['label' => 'SKU / ID oder Wildcard (z.B. BU-*)'])
             ->getForm();
@@ -124,7 +124,7 @@ class FeedManagerController extends AbstractController
         }
 
         // Daten filtriert nach dem aktiven Feed für die Listen laden
-        $blacklistEntries = $em->getRepository(FeedBlacklist::class)->findBy(['feed' => $activeFeed]);
+        $blacklistEntries = $em->getRepository(FeedBlackList::class)->findBy(['feed' => $activeFeed]);
         $shippingRules = $em->getRepository(ShippingRule::class)->findBy(['feed' => $activeFeed], ['minPrice' => 'DESC']);
         $freeShippingRules = $em->getRepository(FreeShippingRule::class)->findBy(['feed' => $activeFeed]);
 
@@ -168,7 +168,7 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-blacklist/{id}', name: 'app_feed_delete_blacklist', methods: ['POST'])]
-    public function deleteBlacklist(FeedBlacklist $item, EntityManagerInterface $em): Response
+    public function deleteBlacklist(FeedBlackList $item, EntityManagerInterface $em): Response
     {
         $feedId = $item->getFeed()->getId();
         $em->remove($item);
