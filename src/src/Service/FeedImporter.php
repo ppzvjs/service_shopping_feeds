@@ -5,7 +5,8 @@ namespace App\Service;
 use App\Entity\Mysql\Product;
 use App\Entity\Mysql\FeedConfig;
 use App\Entity\Mysql\FeedBlackList;
-use App\Entity\Mysql\FeedWhiteList; // NEU hinzugefügt
+use App\Entity\Mysql\FeedWhiteList;
+use App\Entity\Mysql\FeedOverrideSale; // NEU hinzugefügt
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,7 +44,7 @@ class FeedImporter
             }
         }
 
-        // --- NEU: 2b. Whitelist gefiltert nach diesem Feed laden & aufteilen ---
+        // 2b. Whitelist gefiltert nach diesem Feed laden & aufteilen
         $whitelistEntries = $this->mysqlEntityManager->getRepository(FeedWhiteList::class)->findBy(['feed' => $config]);
 
         $exactWhitelist = [];
@@ -58,6 +59,24 @@ class FeedImporter
                 $wildcardWhitelist[] = $skuPattern;
             } else {
                 $exactWhitelist[] = $skuPattern;
+            }
+        }
+
+        // --- NEU: 2c. Sale-Overrides gefiltert nach diesem Feed laden & aufteilen ---
+        $overrideSaleEntries = $this->mysqlEntityManager->getRepository(FeedOverrideSale::class)->findBy(['feed' => $config]);
+
+        $exactOverrideSale = [];
+        $wildcardOverrideSale = [];
+
+        foreach ($overrideSaleEntries as $entry) {
+            $skuPattern = trim($entry->getSku());
+            if ($skuPattern === '') {
+                continue;
+            }
+            if (str_contains($skuPattern, '*')) {
+                $wildcardOverrideSale[] = $skuPattern;
+            } else {
+                $exactOverrideSale[] = $skuPattern;
             }
         }
 
@@ -116,8 +135,7 @@ class FeedImporter
                 }
             }
 
-            // --- NEU: REGEL 1b: WHITELIST MODUS PRÜFEN (Variante B) ---
-            // Wenn "Alle ausschließen" aktiv ist, muss der Artikel auf die Whitelist, sonst fliegt er raus
+            // --- REGEL 1b: WHITELIST MODUS PRÜFEN (Variante B) ---
             if (!$isBlacklisted && method_exists($config, 'isExcludeAllProducts') && $config->isExcludeAllProducts()) {
                 $isOnWhitelist = false;
 
@@ -132,7 +150,6 @@ class FeedImporter
                     }
                 }
 
-                // Wenn NICHT auf der Whitelist, behandeln wir es wie ein geblacklistetes Produkt
                 if (!$isOnWhitelist) {
                     $isBlacklisted = true;
                 }
@@ -163,17 +180,37 @@ class FeedImporter
 
             $product->setFeed($config);
 
-            // --- PREISE PARSEN ---
+            // --- PREISE PARSEN & OVERRIDE LOGIK ---
             $priceRaw = (string) $googleNamespace->price;
             $price = (float) filter_var($priceRaw, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
-            $product->setPrice($price);
 
+            $salePrice = null;
             if (isset($googleNamespace->sale_price) && !empty((string)$googleNamespace->sale_price)) {
                 $salePriceRaw = (string) $googleNamespace->sale_price;
                 $salePrice = (float) filter_var($salePriceRaw, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
-                $product->setSalePrice($salePrice);
+            }
+
+            // Prüfen, ob für diese SKU ein Sale-Override greift
+            $shouldOverrideSale = false;
+            if (in_array($remoteId, $exactOverrideSale, true)) {
+                $shouldOverrideSale = true;
             } else {
-                $product->setSalePrice(null);
+                foreach ($wildcardOverrideSale as $pattern) {
+                    if (fnmatch($pattern, $remoteId)) {
+                        $shouldOverrideSale = true;
+                        break;
+                    }
+                }
+            }
+
+            // Wenn die Regel greift UND ein Sale-Preis im XML existiert
+            if ($shouldOverrideSale && $salePrice !== null) {
+                $product->setPrice($salePrice); // Sale-Preis wird zum normalen Preis
+                $product->setSalePrice(null);   // Reduzierter Preis im Feed wird entfernt
+            } else {
+                // Standard-Verhalten
+                $product->setPrice($price);
+                $product->setSalePrice($salePrice);
             }
 
             // --- REGEL 1c: PREISSPANNE PRÜFEN (VON / BIS) ---
@@ -270,6 +307,7 @@ class FeedImporter
                 $this->mysqlEntityManager->clear();
                 $productRepository = $this->mysqlEntityManager->getRepository(Product::class);
                 $config = $this->mysqlEntityManager->getRepository(FeedConfig::class)->find($feedId);
+                // Overrides müssen nach einem Clear nicht neu geladen werden, da die Arrays einfache Strings halten.
             }
         }
 

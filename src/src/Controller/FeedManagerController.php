@@ -4,7 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Mysql\FeedConfig;
 use App\Entity\Mysql\FeedBlackList;
-use App\Entity\Mysql\FeedWhiteList; // NEU hinzugefügt
+use App\Entity\Mysql\FeedOverrideSale; // Bestätigt
+use App\Entity\Mysql\FeedWhiteList;
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use App\Entity\Mysql\Product;
@@ -15,7 +16,7 @@ use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType; // NEU hinzugefügt
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -70,7 +71,6 @@ class FeedManagerController extends AbstractController
             ->add('feedUrl', UrlType::class, ['label' => 'URL bearbeiten'])
             ->add('minProductPrice', NumberType::class, ['label' => 'Min. Preis (€)', 'required' => false])
             ->add('maxProductPrice', NumberType::class, ['label' => 'Max. Preis (€)', 'required' => false])
-            // NEU: Steuert den globalen Ausschluss (Ausschalten = Variante A | Einschalten = Variante B)
             ->add('excludeAllProducts', CheckboxType::class, [
                 'label' => 'Alle Artikel standardmäßig ausschließen (Whitelist-Modus aktivieren)',
                 'required' => false,
@@ -92,14 +92,14 @@ class FeedManagerController extends AbstractController
 
         $blacklistForm->handleRequest($request);
         if ($blacklistForm->isSubmitted() && $blacklistForm->isValid()) {
-            $blacklist->setFeed($activeFeed); // Wichtig: An aktiven Feed koppeln!
+            $blacklist->setFeed($activeFeed);
             $em->persist($blacklist);
             $em->flush();
             $this->addFlash('success', 'Artikelsperre für diesen Feed hinzugefügt.');
             return $this->redirectToRoute('app_feed_manager', ['active_feed' => $activeFeed->getId()]);
         }
 
-        // --- NEU: FORMULAR C2: WHITELIST FÜR AKTIVEN FEED (Artikel wieder hinzu) ---
+        // --- FORMULAR C2: WHITELIST FÜR AKTIVEN FEED ---
         $whitelist = new FeedWhiteList();
         $whitelistForm = $this->container->get('form.factory')->createNamedBuilder('whitelist_form', FormType::class, $whitelist)
             ->add('sku', TextType::class, ['label' => 'SKU / ID oder Wildcard (z.B. CH-* / 12345)'])
@@ -107,10 +107,25 @@ class FeedManagerController extends AbstractController
 
         $whitelistForm->handleRequest($request);
         if ($whitelistForm->isSubmitted() && $whitelistForm->isValid()) {
-            $whitelist->setFeed($activeFeed); // Wichtig: An aktiven Feed koppeln!
+            $whitelist->setFeed($activeFeed);
             $em->persist($whitelist);
             $em->flush();
             $this->addFlash('success', 'Whitelist-Ausnahme (Artikel wieder einschließen) hinzugefügt.');
+            return $this->redirectToRoute('app_feed_manager', ['active_feed' => $activeFeed->getId()]);
+        }
+
+        // --- NEU: FORMULAR F: SALE OVERRIDE FÜR AKTIVEN FEED ---
+        $overrideSale = new FeedOverrideSale();
+        $overrideSaleForm = $this->container->get('form.factory')->createNamedBuilder('override_sale_form', FormType::class, $overrideSale)
+            ->add('sku', TextType::class, ['label' => 'SKU / ID oder Wildcard (z.B. SALE-*)'])
+            ->getForm();
+
+        $overrideSaleForm->handleRequest($request);
+        if ($overrideSaleForm->isSubmitted() && $overrideSaleForm->isValid()) {
+            $overrideSale->setFeed($activeFeed);
+            $em->persist($overrideSale);
+            $em->flush();
+            $this->addFlash('success', 'Sale-Override-Regel für diesen Feed hinzugefügt.');
             return $this->redirectToRoute('app_feed_manager', ['active_feed' => $activeFeed->getId()]);
         }
 
@@ -123,7 +138,7 @@ class FeedManagerController extends AbstractController
 
         $shippingForm->handleRequest($request);
         if ($shippingForm->isSubmitted() && $shippingForm->isValid()) {
-            $shippingRule->setFeed($activeFeed); // Wichtig: An aktiven Feed koppeln!
+            $shippingRule->setFeed($activeFeed);
             $em->persist($shippingRule);
             $em->flush();
             $this->addFlash('success', 'Versandregel für diesen Feed hinzugefügt.');
@@ -138,7 +153,7 @@ class FeedManagerController extends AbstractController
 
         $freeShippingForm->handleRequest($request);
         if ($freeShippingForm->isSubmitted() && $freeShippingForm->isValid()) {
-            $freeShipping->setFeed($activeFeed); // Wichtig: An aktiven Feed koppeln!
+            $freeShipping->setFeed($activeFeed);
             $em->persist($freeShipping);
             $em->flush();
             $this->addFlash('success', 'Gratis-Versand-Ausnahme hinzugefügt.');
@@ -147,7 +162,8 @@ class FeedManagerController extends AbstractController
 
         // Daten filtriert nach dem aktiven Feed für die Listen laden
         $blacklistEntries = $em->getRepository(FeedBlackList::class)->findBy(['feed' => $activeFeed]);
-        $whitelistEntries = $em->getRepository(FeedWhiteList::class)->findBy(['feed' => $activeFeed]); // NEU hinzugefügt
+        $whitelistEntries = $em->getRepository(FeedWhiteList::class)->findBy(['feed' => $activeFeed]);
+        $overrideSaleEntries = $em->getRepository(FeedOverrideSale::class)->findBy(['feed' => $activeFeed]); // NEU geladen
         $shippingRules = $em->getRepository(ShippingRule::class)->findBy(['feed' => $activeFeed], ['minPrice' => 'DESC']);
         $freeShippingRules = $em->getRepository(FreeShippingRule::class)->findBy(['feed' => $activeFeed]);
 
@@ -160,11 +176,13 @@ class FeedManagerController extends AbstractController
             'addFeedForm' => $addFeedForm->createView(),
             'configForm' => $configForm->createView(),
             'blacklistForm' => $blacklistForm->createView(),
-            'whitelistForm' => $whitelistForm->createView(), // NEU hinzugefügt
+            'whitelistForm' => $whitelistForm->createView(),
+            'overrideSaleForm' => $overrideSaleForm->createView(), // NEU übergeben
             'shippingForm' => $shippingForm->createView(),
             'freeShippingForm' => $freeShippingForm->createView(),
             'blacklist' => $blacklistEntries,
-            'whitelist' => $whitelistEntries, // NEU hinzugefügt
+            'whitelist' => $whitelistEntries,
+            'overrideSales' => $overrideSaleEntries, // NEU übergeben
             'shippingRules' => $shippingRules,
             'freeShippingRules' => $freeShippingRules,
             'productCount' => $productCount,
@@ -235,15 +253,20 @@ class FeedManagerController extends AbstractController
     #[Route('delete-feed/{id}', name: 'app_feed_delete', methods: ['POST'])]
     public function deleteFeed(FeedConfig $feed, EntityManagerInterface $em): Response
     {
-        // Alle Produkte, die zu diesem Feed gehören, sicherheitshalber löschen
-        // (Obwohl CASCADE das meiste regelt, ist das sauber für Doctrine)
         $em->remove($feed);
         $em->flush();
 
         $this->addFlash('success', sprintf('Der Feed "%s" und alle zugehörigen Daten wurden gelöscht.', $feed->getName()));
-
-        // Nach dem Löschen leiten wir einfach auf die Hauptseite weiter.
-        // Der Controller sucht sich dann automatisch den nächsten verbleibenden Feed als aktiv aus.
         return $this->redirectToRoute('app_feed_manager');
+    }
+
+    #[Route('delete-override-sale/{id}', name: 'app_feed_delete_override_sale', methods: ['POST'])]
+    public function deleteOverrideSale(FeedOverrideSale $item, EntityManagerInterface $em): Response
+    {
+        $feedId = $item->getFeed()->getId();
+        $em->remove($item);
+        $em->flush();
+        $this->addFlash('success', 'Sale-Override-Regel entfernt.');
+        return $this->redirectToRoute('app_feed_manager', ['active_feed' => $feedId]);
     }
 }

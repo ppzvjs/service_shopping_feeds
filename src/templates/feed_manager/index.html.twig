@@ -1,9 +1,11 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-    <div style="max-width: 1200px; margin: 40px auto; font-family: sans-serif; padding: 0 20px;">
+    <div style="max-width: 1400px; margin: 40px auto; font-family: sans-serif; padding: 0 20px;">
+
+        {# HAUPTTITEL (Fungiert als Home-Button) #}
         <h1>
-            <a href="{{ path('app_feed_manager') }}" style="text-decoration: none; color: #333; hover: color #1e88e5;">
+            <a href="{{ path('app_feed_manager') }}" style="text-decoration: none; color: #333; transition: color 0.2s;" onmouseover="this.style.color='#1e88e5'" onmouseout="this.style.color='#333'">
                 📦 Multi-Feed Manager Dashboard
             </a>
         </h1>
@@ -11,18 +13,19 @@
         {# Flash Messages #}
         {% for label, messages in app.flashes %}
             {% for message in messages %}
-                <div style="padding: 12px; margin-bottom: 20px; background: {{ label == 'success' ? '#d4edda' : '#f8d7da' }}; color: {{ label == 'success' ? '#155724' : '#721c24' }}; border-radius: 4px;">
+                <div style="padding: 12px; margin-bottom: 20px; background: {{ label == 'success' ? '#d4edda' : '#f8d7da' }}; color: {{ label == 'success' ? '#155724' : '#721c24' }}; border-radius: 4px; font-weight: bold;">
                     {{ message }}
                 </div>
             {% endfor %}
         {% endfor %}
 
+        {# TOP-BAR: Feed-Auswahl & Erstellung #}
         <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f3f4; padding: 10px 15px; border-radius: 6px; margin-bottom: 30px; gap: 20px; flex-wrap: wrap;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <span style="font-weight: bold; color: #555; margin-right: 10px;">Deine Feeds:</span>
                 {% for f in allFeeds %}
                     <a href="{{ path('app_feed_manager', {active_feed: f.id}) }}"
-                       style="text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; font-size: 14px;
+                       style="text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; font-size: 14px; transition: all 0.2s;
                               {{ activeFeed and f.id == activeFeed.id ? 'background: #1e88e5; color: white;' : 'background: #fff; color: #333; border: 1px solid #ccc;' }}">
                         🌐 {{ f.name }}
                     </a>
@@ -50,14 +53,16 @@
         </div>
 
         {% if activeFeed %}
+            {# AKTIVER SHOP-NAME #}
             <div style="border-left: 4px solid #1e88e5; padding-left: 15px; margin-bottom: 25px;">
                 <h2 style="margin: 0 0 5px 0; color: #1e88e5;">Aktiver Feed: {{ activeFeed.name }}</h2>
             </div>
 
+            {# MANUELLE SYNCHRONISIERUNG & EXPORT LINKS #}
             <div style="background: #e3f2fd; border: 1px solid #90caf9; padding: 20px; border-radius: 6px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; gap: 20px;">
                 <div>
                     <h3 style="margin: 0 0 5px 0;">Feed manuell verarbeiten</h3>
-                    <p style="margin: 0 0 8px 0; color: #555;">Aktuelle Quell-URL: <code style="background:#fff; padding:2px 4px;">{{ activeFeed.feedUrl }}</code></p>
+                    <p style="margin: 0 0 8px 0; color: #555;">Aktuelle Quell-URL: <code style="background:#fff; padding:2px 4px; border:1px solid #ddd; border-radius:3px;">{{ activeFeed.feedUrl }}</code></p>
                     <p style="margin: 0; color: #555;">💡 Export-URL für Drittsysteme:
                         <a href="{{ path('app_feed_export', {id: activeFeed.id}) }}" target="_blank" style="color: #1e88e5; font-weight: bold; text-decoration: underline;">
                             {{ url('app_feed_export', {id: activeFeed.id}) }}
@@ -65,15 +70,16 @@
                     </p>
                 </div>
                 <form action="{{ path('app_feed_run_import', {id: activeFeed.id}) }}" method="POST" style="margin: 0;">
-                    <button type="submit" style="background: #1e88e5; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; white-space: nowrap;">
+                    <button type="submit" style="background: #1e88e5; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; white-space: nowrap; transition: background 0.2s;" onmouseover="this.style.background='#1565c0'" onmouseout="this.style.background='#1e88e5'">
                         🔄 Jetzt "{{ activeFeed.name }}" synchronisieren
                     </button>
                 </form>
             </div>
 
+            {# STATISTIK-KARTEN #}
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px;">
                 <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; border-radius: 6px; text-align: center;">
-                    <span style="font-size: 14px; color: #666; font-weight: bold; text-transform: uppercase;">Letzter Sync: Im Feed gefunden</span>
+                    <span style="font-size: 14px; color: #666; font-weight: bold; text-transform: uppercase;">Letzter Sync: Im XML gefunden</span>
                     <h2 style="margin: 5px 0 0 0; color: #37474f; font-size: 28px;">
                         {{ app.session.get('last_sync_total_' ~ activeFeed.id)|default('Bereit') }}
                     </h2>
@@ -83,26 +89,26 @@
                 <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 6px; text-align: center;">
                     <span style="font-size: 14px; color: #b76e00; font-weight: bold;">Aktive Filter-Regeln</span>
                     <h2 style="margin: 5px 0 0 0; color: #b76e00; font-size: 28px;">
-                        🚫 {{ blacklist|length }} |  {{ whitelist|length }}
+                        🚫 {{ blacklist|length }} | 🟢 {{ whitelist|length }} | 🏷️ {{ overrideSales|length }}
                     </h2>
-                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">Einträge auf Blacklist / Whitelist</p>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">Einträge auf Blacklist / Whitelist / Sale-Overrides</p>
                 </div>
 
                 <div style="background: #e8f5e9; border: 1px solid #a5d6a7; padding: 15px; border-radius: 6px; text-align: center;">
-                    <span style="font-size: 14px; color: #2e7d32; font-weight: bold;">Bereinigter Datenbestand (Ist-Wert)</span>
+                    <span style="font-size: 14px; color: #2e7d32; font-weight: bold;">Bereinigter Datenbestand (DB)</span>
                     <h2 style="margin: 5px 0 0 0; color: #2e7d32; font-size: 28px;">
                         {{ productCount }}
                     </h2>
-                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">Aktuell exportierbare Produkte in der DB</p>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">Aktuell exportierbare Produkte in der Datenbank</p>
                 </div>
             </div>
 
+            {# SEKTION 1: SETTINGS & PREISSPANNE #}
             <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #dee2e6;">
-                {# Kopfbalken mit Titel links und Löschbutton rechts #}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
-                    <h3 style="margin: 0;">1. Feed-Einstellungen & Preis-Filter</h3>
+                    <h3 style="margin: 0; font-size: 18px;">1. Feed-Einstellungen & Preis-Filter</h3>
                     <form action="{{ path('app_feed_delete', {id: activeFeed.id}) }}" method="POST" onsubmit="return confirm('Möchtest du den kompletten Feed &quot;{{ activeFeed.name }}&quot; wirklich löschen? Dabei werden alle Produkte, Blacklists, Whitelists und Versandregeln dieses Feeds unwiderruflich entfernt!');" style="margin: 0;">
-                        <button type="submit" style="background: #c62828; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                        <button type="submit" style="background: #c62828; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='#b71c1c'" onmouseout="this.style.background='#c62828'">
                             🗑️ Feed löschen
                         </button>
                     </form>
@@ -121,7 +127,7 @@
                             {{ form_row(configForm.maxProductPrice, {attr: {style: 'width:100%; padding:8px;', placeholder: 'Kein Limit'}}) }}
                         </div>
 
-                        {# Kontroll-Checkbox für den Import-Modus #}
+                        {# Kontroll-Checkbox für den Import-Modus (Umschalter Variante A / B) #}
                         <div style="background: #fff; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; gap: 8px; height: 38px; box-sizing: border-box;">
                             {{ form_widget(configForm.excludeAllProducts, {attr: {style: 'cursor: pointer; transform: scale(1.2);'}}) }}
                             {{ form_label(configForm.excludeAllProducts, null, {label_attr: {style: 'font-weight: bold; color: #c62828; cursor: pointer; margin: 0; font-size: 13px;'}}) }}
@@ -135,38 +141,38 @@
                 {{ form_end(configForm) }}
             </div>
 
-            {# Haupt-Layout Grid für die Werkzeuge #}
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            {# HAUPT-LAYOUT: 3 Symmetrische, balancierte Spalten #}
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; align-items: start;">
 
-                {# LINKER BEREICH: DIE BEIDEN FILTER-SYSTEME (BLACK- & WHITELIST) #}
-                <div style="display: flex; flex-direction: column; gap: 30px;">
+                {# SPALTE 1: FILTER-SYSTEME (EIN- & AUSSCHLUSS) #}
+                <div style="display: flex; flex-direction: column; gap: 25px;">
 
                     {# Sektion 2a: Blacklist #}
                     <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; background: #fff;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">2a. Artikel ausschließen (Blacklist)</h3>
+                            <h3 style="margin: 0; font-size: 16px;">2a. Artikel ausschließen (Blacklist)</h3>
                             {% if not activeFeed.excludeAllProducts %}
-                                <span style="background: #e8f5e9; color: #2e7d32; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px;">AKTIVER MODUS</span>
+                                <span style="background: #e8f5e9; color: #2e7d32; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 10px; white-space: nowrap;">AKTIVER MODUS</span>
                             {% endif %}
                         </div>
                         {{ form_start(blacklistForm) }}
-                        <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 15px;">
                             <div style="flex: 1;">{{ form_row(blacklistForm.sku, {attr: {style: 'width:100%; padding:8px;', placeholder: 'z.B. BU-*'}}) }}</div>
-                            <button type="submit" style="background:#37474f; color:white; border:none; padding:10px 15px; border-radius:4px; height:38px; cursor:pointer;">+ Sperren</button>
+                            <button type="submit" style="background:#37474f; color:white; border:none; padding:0 12px; border-radius:4px; height:38px; cursor:pointer; font-weight: bold;">+ Sperren</button>
                         </div>
                         {{ form_end(blacklistForm) }}
 
-                        <h4>Gesperrte IDs / Wildcards:</h4>
-                        <ul style="list-style: none; padding: 0; margin: 0;">
+                        <h4 style="font-size: 14px; margin: 10px 0 5px 0;">Gesperrte IDs / Wildcards:</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto;">
                             {% for item in blacklist %}
-                                <li style="padding: 8px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                                     <code>{{ item.sku }}</code>
                                     <form action="{{ path('app_feed_delete_blacklist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Sperrung aufheben?');" style="margin: 0;">
-                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold;">Löschen</button>
+                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold; font-size: 12px;">Löschen</button>
                                     </form>
                                 </li>
                             {% else %}
-                                <li style="color: #777; font-style: italic;">Keine Artikel blockiert.</li>
+                                <li style="color: #777; font-style: italic; font-size: 13px;">Keine Artikel blockiert.</li>
                             {% endfor %}
                         </ul>
                     </div>
@@ -174,97 +180,130 @@
                     {# Sektion 2b: Whitelist #}
                     <div style="border: 1px solid #a5d6a7; padding: 20px; border-radius: 6px; background: #fff;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">2b. Artikel einschließen (Whitelist)</h3>
+                            <h3 style="margin: 0; font-size: 16px;">2b. Artikel einschließen (Whitelist)</h3>
                             {% if activeFeed.excludeAllProducts %}
-                                <span style="background: #ffe082; color: #b76e00; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px;">WHITELIST MODUS AKTIV</span>
+                                <span style="background: #ffe082; color: #b76e00; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 10px; white-space: nowrap;">WHITELIST MODUS AKTIV</span>
                             {% endif %}
                         </div>
                         {{ form_start(whitelistForm) }}
-                        <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                        <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 15px;">
                             <div style="flex: 1;">{{ form_row(whitelistForm.sku, {attr: {style: 'width:100%; padding:8px;', placeholder: 'z.B. CH-*'}}) }}</div>
-                            <button type="submit" style="background:#2e7d32; color:white; border:none; padding:10px 15px; border-radius:4px; height:38px; cursor:pointer;">+ Erlauben</button>
+                            <button type="submit" style="background:#2e7d32; color:white; border:none; padding:0 12px; border-radius:4px; height:38px; cursor:pointer; font-weight: bold;">+ Erlauben</button>
                         </div>
                         {{ form_end(whitelistForm) }}
 
-                        <h4>Erlaubte IDs / Wildcards:</h4>
-                        <ul style="list-style: none; padding: 0; margin: 0;">
+                        <h4 style="font-size: 14px; margin: 10px 0 5px 0;">Erlaubte IDs / Wildcards:</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto;">
                             {% for item in whitelist %}
-                                <li style="padding: 8px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                                     <code style="color: #2e7d32; font-weight: bold;">{{ item.sku }}</code>
                                     <form action="{{ path('app_feed_delete_whitelist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Ausnahme vom globalen Ausschluss entfernen?');" style="margin: 0;">
-                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold;">Löschen</button>
+                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold; font-size: 12px;">Löschen</button>
                                     </form>
                                 </li>
                             {% else %}
-                                <li style="color: #777; font-style: italic;">Keine Whitelist-Ausnahmen definiert. {% if activeFeed.excludeAllProducts %}<strong style="color: #c62828;">(Feed bleibt beim Sync leer!)</strong>{% endif %}</li>
+                                <li style="color: #777; font-style: italic; font-size: 13px;">Keine Ausnahmen definiert. {% if activeFeed.excludeAllProducts %}<strong style="color: #c62828;">(Feed bleibt beim Sync leer!)</strong>{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                {# SPALTE 2: PREIS-MANIPULATIONEN (Wandert logisch in die Mitte) #}
+                <div style="border: 1px solid #b3e5fc; padding: 20px; border-radius: 6px; background: #fff;">
+                    <h3 style="margin: 0 0 5px 0; font-size: 16px;">3. Sale-Preis zu Normalpreis (Overrides)</h3>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 15px; line-height: 1.4;">
+                        Ersetzt den regulären Preis durch den Aktionspreis (<code>sale_price</code> wird im Export geleert). Ideal, um Streichpreise aufzuheben.
+                    </p>
+                    {{ form_start(overrideSaleForm) }}
+                    <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 20px;">
+                        <div style="flex: 1;">{{ form_row(overrideSaleForm.sku, {attr: {style: 'width:100%; padding:8px;', placeholder: 'z.B. SALE-*'}}) }}</div>
+                        <button type="submit" style="background:#0288d1; color:white; border:none; padding:0 12px; border-radius:4px; height:38px; cursor:pointer; font-weight: bold;">+ Aktivieren</button>
+                    </div>
+                    {{ form_end(overrideSaleForm) }}
+
+                    <h4 style="font-size: 14px; margin: 10px 0 5px 0;">Aktive Overrides:</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; max-height: 450px; overflow-y: auto;">
+                        {% for item in overrideSales %}
+                            <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                                <span>🏷️ <code>{{ item.sku }}</code></span>
+                                <form action="{{ path('app_feed_delete_override_sale', {id: item.id}) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Regel wirklich entfernen?');">
+                                    <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold; font-size: 12px;">Löschen</button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li style="color: #777; font-style: italic; font-size: 13px;">Keine Overrides definiert.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                {# SPALTE 3: LOGISTIK / VERSANDKOSTEN-LOGIK #}
+                <div style="display: flex; flex-direction: column; gap: 25px;">
+
+                    {# Sektion 4: Versandkosten-Staffeln #}
+                    <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; background: #fff;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 16px;">4. Versandkosten-Staffeln</h3>
+                        {{ form_start(shippingForm) }}
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div>{{ form_row(shippingForm.minPrice, {attr: {style: 'width:100%; padding:8px;'}}) }}</div>
+                            <div>{{ form_row(shippingForm.shippingCost, {attr: {style: 'width:100%; padding:8px;'}}) }}</div>
+                        </div>
+                        <button type="submit" style="background:#37474f; color:white; border:none; padding:10px 15px; border-radius:4px; width:100%; cursor:pointer; margin-bottom: 15px; font-weight: bold;">+ Staffel hinzufügen</button>
+                        {{ form_end(shippingForm) }}
+
+                        <h4 style="font-size: 14px; margin: 0 0 5px 0;">Aktive Regeln:</h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                            <tr style="background: #f1f3f4; text-align: left;">
+                                <th style="padding: 6px 8px;">Ab Produktpreis</th>
+                                <th style="padding: 6px 8px;">Kosten</th>
+                                <th style="padding: 6px 8px; text-align: right;">Aktion</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for rule in shippingRules %}
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 6px 8px;">ab {{ rule.minPrice|number_format(2, ',', '.') }} €</td>
+                                    <td style="padding: 6px 8px; font-weight: bold;">{{ rule.shippingCost|number_format(2, ',', '.') }} €</td>
+                                    <td style="padding: 6px 8px; text-align: right;">
+                                        <form action="{{ path('app_feed_delete_shipping', {id: rule.id}) }}" method="POST" style="margin: 0;">
+                                            <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-size: 12px;">Entfernen</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" style="color: #777; font-style: italic; padding: 10px 0;">Keine Regeln definiert.</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {# Sektion 5: Immer versandkostenfrei #}
+                    <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; background: #fff;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 16px;">5. Immer versandkostenfrei</h3>
+                        {{ form_start(freeShippingForm) }}
+                        <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 15px;">
+                            <div style="flex: 1;">{{ form_row(freeShippingForm.skuPattern, {attr: {style: 'width:100%; padding:8px;', placeholder: 'z.B. FREE-*'}}) }}</div>
+                            <button type="submit" style="background:#2e7d32; color:white; border:none; padding:0 12px; border-radius:4px; height:38px; cursor:pointer; font-weight: bold;">+ Frei</button>
+                        </div>
+                        {{ form_end(freeShippingForm) }}
+
+                        <h4 style="font-size: 14px; margin: 0 0 5px 0;">Aktive Ausnahmen:</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto;">
+                            {% for rule in freeShippingRules %}
+                                <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                                    <span style="color: #2e7d32; font-weight: bold;">🚚 <code>{{ rule.skuPattern }}</code></span>
+                                    <form action="{{ path('app_feed_delete_free_shipping', {id: rule.id}) }}" method="POST" style="margin: 0;">
+                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-size: 12px;">Entfernen</button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <li style="color: #777; font-style: italic; font-size: 13px;">Keine SKU-Ausnahmen definiert.</li>
                             {% endfor %}
                         </ul>
                     </div>
 
-                </div>
-
-                {# RECHTER BEREICH: VERSANDKOSTEN-LOGIK #}
-                <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; align-self: start; background: #fff;">
-                    <h3>3. Versandkosten-Regeln (für {{ activeFeed.name }})</h3>
-                    {{ form_start(shippingForm) }}
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                        <div>{{ form_row(shippingForm.minPrice, {attr: {style: 'width:100%; padding:8px;'}}) }}</div>
-                        <div>{{ form_row(shippingForm.shippingCost, {attr: {style: 'width:100%; padding:8px;'}}) }}</div>
-                    </div>
-                    <button type="submit" style="background:#37474f; color:white; border:none; padding:10px 15px; border-radius:4px; width:100%; cursor:pointer; margin-bottom: 20px;">+ Regel hinzufügen</button>
-                    {{ form_end(shippingForm) }}
-
-                    <h4>Aktive Regeln:</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                        <thead>
-                        <tr style="background: #f1f3f4; text-align: left;">
-                            <th style="padding: 8px;">Ab Produktpreis</th>
-                            <th style="padding: 8px;">Versandkosten</th>
-                            <th style="padding: 8px;">Aktion</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for rule in shippingRules %}
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 8px;">ab {{ rule.minPrice|number_format(2, ',', '.') }} €</td>
-                                <td style="padding: 8px; font-weight: bold;">{{ rule.shippingCost|number_format(2, ',', '.') }} €</td>
-                                <td style="padding: 8px;">
-                                    <form action="{{ path('app_feed_delete_shipping', {id: rule.id}) }}" method="POST" style="margin: 0;">
-                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer;">Entfernen</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td colspan="3" style="color: #777; font-style: italic; padding: 10px 0;">Keine Regeln definiert.</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-
-                    <hr style="margin: 30px 0; border: 0; border-top: 1px solid #dee2e6;">
-
-                    <h3>4. Immer versandkostenfrei (für {{ activeFeed.name }})</h3>
-                    {{ form_start(freeShippingForm) }}
-                    <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
-                        <div style="flex: 1;">{{ form_row(freeShippingForm.skuPattern, {attr: {style: 'width:100%; padding:8px;'}}) }}</div>
-                        <button type="submit" style="background:#2e7d32; color:white; border:none; padding:10px 15px; border-radius:4px; height:38px; cursor:pointer;">+ Aktivieren</button>
-                    </div>
-                    {{ form_end(freeShippingForm) }}
-
-                    <h4>Aktive Ausnahmen:</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        {% for rule in freeShippingRules %}
-                            <li style="padding: 8px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #2e7d32; font-weight: bold;">🚚 <code>{{ rule.skuPattern }}</code> ist versandkostenfrei</span>
-                                <form action="{{ path('app_feed_delete_free_shipping', {id: rule.id}) }}" method="POST" style="margin: 0;">
-                                    <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer;">Entfernen</button>
-                                </form>
-                            </li>
-                        {% else %}
-                            <li style="color: #777; font-style: italic;">Keine SKU-Ausnahmen definiert.</li>
-                        {% endfor %}
-                    </ul>
                 </div>
 
             </div>
