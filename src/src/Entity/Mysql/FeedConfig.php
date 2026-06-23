@@ -26,6 +26,9 @@ class FeedConfig
     #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
     private ?string $maxProductPrice = null;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $excludeAllProducts = false;
+
     public function getId(): ?int { return $this->id; }
     public function getName(): ?string { return $this->name; }
     public function setName(string $name): self { $this->name = $name; return $this; }
@@ -51,6 +54,25 @@ class FeedConfig
     public function setMaxProductPrice(?float $maxProductPrice): self
     {
         $this->maxProductPrice = $maxProductPrice !== null ? (string)$maxProductPrice : null;
+        return $this;
+    }
+
+    // Der Getter (Symfony sucht bei Booleans bevorzugt nach "is...")
+    public function isExcludeAllProducts(): bool
+    {
+        return $this->excludeAllProducts;
+    }
+
+// Alternativer Getter (falls Symfony explizit "get..." verlangt)
+    public function getExcludeAllProducts(): bool
+    {
+        return $this->excludeAllProducts;
+    }
+
+// Der Setter
+    public function setExcludeAllProducts(bool $excludeAllProducts): self
+    {
+        $this->excludeAllProducts = $excludeAllProducts;
         return $this;
     }
 }

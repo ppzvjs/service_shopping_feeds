@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\Mysql\Product;
 use App\Entity\Mysql\FeedConfig;
 use App\Entity\Mysql\FeedBlackList;
+use App\Entity\Mysql\FeedWhiteList; // NEU hinzugefügt
 use App\Entity\Mysql\ShippingRule;
 use App\Entity\Mysql\FreeShippingRule;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,6 +40,24 @@ class FeedImporter
                 $wildcardBlacklist[] = $skuPattern;
             } else {
                 $exactBlacklist[] = $skuPattern;
+            }
+        }
+
+        // --- NEU: 2b. Whitelist gefiltert nach diesem Feed laden & aufteilen ---
+        $whitelistEntries = $this->mysqlEntityManager->getRepository(FeedWhiteList::class)->findBy(['feed' => $config]);
+
+        $exactWhitelist = [];
+        $wildcardWhitelist = [];
+
+        foreach ($whitelistEntries as $entry) {
+            $skuPattern = trim($entry->getSku());
+            if ($skuPattern === '') {
+                continue;
+            }
+            if (str_contains($skuPattern, '*')) {
+                $wildcardWhitelist[] = $skuPattern;
+            } else {
+                $exactWhitelist[] = $skuPattern;
             }
         }
 
@@ -83,7 +102,7 @@ class FeedImporter
                 continue;
             }
 
-            // --- REGEL 1: BLACKLIST CHECK ---
+            // --- REGEL 1: BLACKLIST CHECK (Gilt für BEIDE Varianten) ---
             $isBlacklisted = false;
 
             if (in_array($remoteId, $exactBlacklist, true)) {
@@ -97,6 +116,29 @@ class FeedImporter
                 }
             }
 
+            // --- NEU: REGEL 1b: WHITELIST MODUS PRÜFEN (Variante B) ---
+            // Wenn "Alle ausschließen" aktiv ist, muss der Artikel auf die Whitelist, sonst fliegt er raus
+            if (!$isBlacklisted && method_exists($config, 'isExcludeAllProducts') && $config->isExcludeAllProducts()) {
+                $isOnWhitelist = false;
+
+                if (in_array($remoteId, $exactWhitelist, true)) {
+                    $isOnWhitelist = true;
+                } else {
+                    foreach ($wildcardWhitelist as $pattern) {
+                        if (fnmatch($pattern, $remoteId)) {
+                            $isOnWhitelist = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Wenn NICHT auf der Whitelist, behandeln wir es wie ein geblacklistetes Produkt
+                if (!$isOnWhitelist) {
+                    $isBlacklisted = true;
+                }
+            }
+
+            // Lösch- und Überspringlogik für Blacklist ODER fehlenden Whitelist-Eintrag
             if ($isBlacklisted) {
                 $existingProduct = $productRepository->findOneBy(['remoteId' => $remoteId, 'feed' => $config]);
                 if ($existingProduct) {
@@ -134,7 +176,7 @@ class FeedImporter
                 $product->setSalePrice(null);
             }
 
-            // --- REGEL 1b: PREISSPANNE PRÜFEN (VON / BIS) ---
+            // --- REGEL 1c: PREISSPANNE PRÜFEN (VON / BIS) ---
             $activePrice = $product->getActivePrice();
             $isOutOfPriceRange = false;
 

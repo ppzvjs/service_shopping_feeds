@@ -77,11 +77,11 @@
                 </div>
 
                 <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 15px; border-radius: 6px; text-align: center;">
-                    <span style="font-size: 14px; color: #b76e00; font-weight: bold;">Aktive Ausschluss-Regeln</span>
+                    <span style="font-size: 14px; color: #b76e00; font-weight: bold;">Aktive Filter-Regeln</span>
                     <h2 style="margin: 5px 0 0 0; color: #b76e00; font-size: 28px;">
-                        {{ blacklist|length }}
+                        🚫 {{ blacklist|length }} |  {{ whitelist|length }}
                     </h2>
-                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">Definierte IDs & Wildcards auf der Blacklist</p>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #888;">Einträge auf Blacklist / Whitelist</p>
                 </div>
 
                 <div style="background: #e8f5e9; border: 1px solid #a5d6a7; padding: 15px; border-radius: 6px; text-align: center;">
@@ -94,19 +94,35 @@
             </div>
 
             <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #dee2e6;">
-                <h3>1. Feed-Einstellungen & Preis-Filter</h3>
+                {# Kopfbalken mit Titel links und Löschbutton rechts #}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
+                    <h3 style="margin: 0;">1. Feed-Einstellungen & Preis-Filter</h3>
+                    <form action="{{ path('app_feed_delete', {id: activeFeed.id}) }}" method="POST" onsubmit="return confirm('Möchtest du den kompletten Feed &quot;{{ activeFeed.name }}&quot; wirklich löschen? Dabei werden alle Produkte, Blacklists, Whitelists und Versandregeln dieses Feeds unwiderruflich entfernt!');" style="margin: 0;">
+                        <button type="submit" style="background: #c62828; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                            🗑️ Feed löschen
+                        </button>
+                    </form>
+                </div>
+
                 {{ form_start(configForm) }}
                 <div style="display: flex; flex-direction: column; gap: 15px;">
                     <div>
                         {{ form_row(configForm.feedUrl, {attr: {style: 'width:100%; padding:8px;'}}) }}
                     </div>
-                    <div style="display: flex; gap: 20px; align-items: flex-end;">
+                    <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
                         <div style="width: 200px;">
                             {{ form_row(configForm.minProductPrice, {attr: {style: 'width:100%; padding:8px;', placeholder: 'Kein Limit'}}) }}
                         </div>
                         <div style="width: 200px;">
                             {{ form_row(configForm.maxProductPrice, {attr: {style: 'width:100%; padding:8px;', placeholder: 'Kein Limit'}}) }}
                         </div>
+
+                        {# Kontroll-Checkbox für den Import-Modus #}
+                        <div style="background: #fff; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; gap: 8px; height: 38px; box-sizing: border-box;">
+                            {{ form_widget(configForm.excludeAllProducts, {attr: {style: 'cursor: pointer; transform: scale(1.2);'}}) }}
+                            {{ form_label(configForm.excludeAllProducts, null, {label_attr: {style: 'font-weight: bold; color: #c62828; cursor: pointer; margin: 0; font-size: 13px;'}}) }}
+                        </div>
+
                         <div style="flex: 1; text-align: right;">
                             <button type="submit" style="background: #757575; color:white; border:none; padding:10px 20px; border-radius:4px; height:38px; cursor:pointer; font-weight: bold;">⚙️ Einstellungen speichern</button>
                         </div>
@@ -115,32 +131,75 @@
                 {{ form_end(configForm) }}
             </div>
 
+            {# Haupt-Layout Grid für die Werkzeuge #}
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
 
-                <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; align-self: start; background: #fff;">
-                    <h3>2. Artikel ausschließen (Blacklist für {{ activeFeed.name }})</h3>
-                    {{ form_start(blacklistForm) }}
-                    <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
-                        <div style="flex: 1;">{{ form_row(blacklistForm.sku, {attr: {style: 'width:100%; padding:8px;'}}) }}</div>
-                        <button type="submit" style="background:#37474f; color:white; border:none; padding:10px 15px; border-radius:4px; height:38px; cursor:pointer;">+ Sperren</button>
-                    </div>
-                    {{ form_end(blacklistForm) }}
+                {# LINKER BEREICH: DIE BEIDEN FILTER-SYSTEME (BLACK- & WHITELIST) #}
+                <div style="display: flex; flex-direction: column; gap: 30px;">
 
-                    <h4>Gesperrte IDs / Wildcards:</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        {% for item in blacklist %}
-                            <li style="padding: 8px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                                <code>{{ item.sku }}</code>
-                                <form action="{{ path('app_feed_delete_blacklist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Sperrung aufheben?');" style="margin: 0;">
-                                    <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold;">Löschen</button>
-                                </form>
-                            </li>
-                        {% else %}
-                            <li style="color: #777; font-style: italic;">Keine Artikel blockiert.</li>
-                        {% endfor %}
-                    </ul>
+                    {# Sektion 2a: Blacklist #}
+                    <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; background: #fff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">2a. Artikel ausschließen (Blacklist)</h3>
+                            {% if not activeFeed.excludeAllProducts %}
+                                <span style="background: #e8f5e9; color: #2e7d32; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px;">AKTIVER MODUS</span>
+                            {% endif %}
+                        </div>
+                        {{ form_start(blacklistForm) }}
+                        <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                            <div style="flex: 1;">{{ form_row(blacklistForm.sku, {attr: {style: 'width:100%; padding:8px;', placeholder: 'z.B. BU-*'}}) }}</div>
+                            <button type="submit" style="background:#37474f; color:white; border:none; padding:10px 15px; border-radius:4px; height:38px; cursor:pointer;">+ Sperren</button>
+                        </div>
+                        {{ form_end(blacklistForm) }}
+
+                        <h4>Gesperrte IDs / Wildcards:</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            {% for item in blacklist %}
+                                <li style="padding: 8px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                    <code>{{ item.sku }}</code>
+                                    <form action="{{ path('app_feed_delete_blacklist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Sperrung aufheben?');" style="margin: 0;">
+                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold;">Löschen</button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <li style="color: #777; font-style: italic;">Keine Artikel blockiert.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    {# Sektion 2b: Whitelist #}
+                    <div style="border: 1px solid #a5d6a7; padding: 20px; border-radius: 6px; background: #fff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">2b. Artikel einschließen (Whitelist)</h3>
+                            {% if activeFeed.excludeAllProducts %}
+                                <span style="background: #ffe082; color: #b76e00; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px;">WHITELIST MODUS AKTIV</span>
+                            {% endif %}
+                        </div>
+                        {{ form_start(whitelistForm) }}
+                        <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 20px;">
+                            <div style="flex: 1;">{{ form_row(whitelistForm.sku, {attr: {style: 'width:100%; padding:8px;', placeholder: 'z.B. CH-*'}}) }}</div>
+                            <button type="submit" style="background:#2e7d32; color:white; border:none; padding:10px 15px; border-radius:4px; height:38px; cursor:pointer;">+ Erlauben</button>
+                        </div>
+                        {{ form_end(whitelistForm) }}
+
+                        <h4>Erlaubte IDs / Wildcards:</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            {% for item in whitelist %}
+                                <li style="padding: 8px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                    <code style="color: #2e7d32; font-weight: bold;">{{ item.sku }}</code>
+                                    <form action="{{ path('app_feed_delete_whitelist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Ausnahme vom globalen Ausschluss entfernen?');" style="margin: 0;">
+                                        <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold;">Löschen</button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <li style="color: #777; font-style: italic;">Keine Whitelist-Ausnahmen definiert. {% if activeFeed.excludeAllProducts %}<strong style="color: #c62828;">(Feed bleibt beim Sync leer!)</strong>{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
                 </div>
 
+                {# RECHTER BEREICH: VERSANDKOSTEN-LOGIK #}
                 <div style="border: 1px solid #dee2e6; padding: 20px; border-radius: 6px; align-self: start; background: #fff;">
                     <h3>3. Versandkosten-Regeln (für {{ activeFeed.name }})</h3>
                     {{ form_start(shippingForm) }}
