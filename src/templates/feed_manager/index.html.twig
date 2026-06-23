@@ -2,7 +2,11 @@
 
 {% block body %}
     <div style="max-width: 1200px; margin: 40px auto; font-family: sans-serif; padding: 0 20px;">
-        <h1>📦 Multi-Feed Manager Dashboard</h1>
+        <h1>
+            <a href="{{ path('app_feed_manager') }}" style="text-decoration: none; color: #333; hover: color #1e88e5;">
+                📦 Multi-Feed Manager Dashboard
+            </a>
+        </h1>
 
         {# Flash Messages #}
         {% for label, messages in app.flashes %}
