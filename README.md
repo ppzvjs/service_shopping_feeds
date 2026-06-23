@@ -1,4 +1,4 @@
-# Shopping Feed Generator
+# Shopping Feed Generator - V1
 
 ### Zertifikate erstellen
 
