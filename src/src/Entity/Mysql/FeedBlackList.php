@@ -12,7 +12,7 @@ class FeedBlackList
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255)]
     private ?string $sku = null;
 
     #[ORM\ManyToOne(targetEntity: FeedConfig::class)]
