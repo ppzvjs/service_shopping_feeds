@@ -1,1 +1,0 @@
-docker compose --env-file .env.local build --no-cache
