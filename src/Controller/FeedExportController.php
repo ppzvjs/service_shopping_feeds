@@ -53,6 +53,22 @@ class FeedExportController extends AbstractController
                 $item->addChild('g:sale_price', number_format($product->getSalePrice(), 2, '.', '') . ' EUR', 'http://base.google.com/ns/1.0');
             }
 
+            $price = $product->getPrice();
+            $customLabel0 = match (true) {
+                $price < 10                => 'vk0bis10',
+                $price >= 10  && $price < 25  => 'vk10bis25',
+                $price >= 25  && $price < 50  => 'vk25bis50',
+                $price >= 50  && $price < 100 => 'vk50bis100',
+                $price >= 100 && $price < 250 => 'vk100bis250',
+                $price >= 250 && $price < 500 => 'vk250bis500',
+                $price >= 500               => 'vk500bis',
+                default                     => null,
+            };
+
+            if ($customLabel0 !== null) {
+                $item->addChild('g:custom_label_0', $customLabel0, 'http://base.google.com/ns/1.0');
+            }
+
             $item->addChild('g:condition',htmlspecialchars('Neu', ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
             $item->addChild('g:manufacturer', htmlspecialchars($product->getManufacturer(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
             $item->addChild('g:brand', htmlspecialchars($product->getManufacturer(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
