@@ -22,4 +22,9 @@ Cache löschen
 docker compose exec app php bin/console cache:clear
 ```
 
+## Datenfeed
+https://pareyshop.de/media/feeds/ppz/full-export-ppz.xml
+
+
+
 
