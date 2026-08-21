@@ -60,6 +60,25 @@ class FeedExportController extends AbstractController
             $item->addChild('g:availability', $product->getAvailability(), 'http://base.google.com/ns/1.0');
             $item->addChild('g:image_link', htmlspecialchars($product->getImageLink(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
 
+
+            //Custom Label für Preissegmente
+            $price = $product->getPrice();
+            $customLabel0 = match (true) {
+                $price < 10                => 'vk0bis10',
+                $price >= 10  && $price < 25  => 'vk10bis25',
+                $price >= 25  && $price < 50  => 'vk25bis50',
+                $price >= 50  && $price < 100 => 'vk50bis100',
+                $price >= 100 && $price < 250 => 'vk100bis250',
+                $price >= 250 && $price < 500 => 'vk250bis500',
+                $price >= 500               => 'vk500bis',
+                default                     => null,
+            };
+
+            if ($customLabel0 !== null) {
+                $item->addChild('g:custom_label_0', $customLabel0, 'http://base.google.com/ns/1.0');
+            }
+
+
             // Zusätzliche Bilder exportieren
             if (!empty($product->getAdditionalImages())) {
                 foreach ($product->getAdditionalImages() as $img) {
