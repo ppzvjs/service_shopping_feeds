@@ -53,7 +53,9 @@ class FeedExportController extends AbstractController
                 $item->addChild('g:sale_price', number_format($product->getSalePrice(), 2, '.', '') . ' EUR', 'http://base.google.com/ns/1.0');
             }
 
+            $item->addChild('g:condition',htmlspecialchars('Neu', ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
             $item->addChild('g:manufacturer', htmlspecialchars($product->getManufacturer(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
+            $item->addChild('g:brand', htmlspecialchars($product->getManufacturer(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
             $item->addChild('g:product_type', htmlspecialchars($product->getProductType(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');
             $item->addChild('g:availability', $product->getAvailability(), 'http://base.google.com/ns/1.0');
             $item->addChild('g:image_link', htmlspecialchars($product->getImageLink(), ENT_XML1, 'UTF-8'), 'http://base.google.com/ns/1.0');

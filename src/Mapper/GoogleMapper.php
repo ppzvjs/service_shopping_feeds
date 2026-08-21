@@ -63,6 +63,7 @@ class GoogleMapper
         // add g:id
         $item->addChild('g:id', $sku, 'http://base.google.com/ns/1.0');
         $item->addChild('g:title', $title, 'http://base.google.com/ns/1.0');
+        $item->addChild('g:condition', 'new', 'http://base.google.com/ns/1.0');
 
         // description CDATA
         $descNode = dom_import_simplexml(

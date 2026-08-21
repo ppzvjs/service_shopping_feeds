@@ -51,6 +51,11 @@
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
+    ]
   }
 }</component>
   <component name="RecentsManager">
@@ -75,7 +80,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1787230134563</updated>
-      <workItem from="1787230135627" duration="6376000" />
+      <workItem from="1787230135627" duration="9614000" />
     </task>
     <servers />
   </component>
