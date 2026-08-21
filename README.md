@@ -1,10 +1,25 @@
 # Shopping Feed Generator - V1
 
-### Zertifikate erstellen
-
+## Installation Localhost
+Env Datei erstellen
 ```bash
-openssl req -x509 -out apache/ssl/localhost.crt -keyout apache/ssl/localhost.key \
-  -newkey rsa:2048 -nodes -sha256 \
-  -subj '/CN=localhost' -extensions EXT -config <( \
-   printf "[dn]\nCN=localhost\n[req]\ndistinguished_name = dn\n[EXT]\nsubjectAltName=DNS:localhost\nkeyUsage=digitalSignature\nextendedKeyUsage=serverAuth")
+cp .env .env.local
 ```
+Container erstellen
+```bash
+docker compose up -d --build
+```
+Composer Packete installieren
+```bash
+docker compose run --rm composer install
+```
+Localhost Datenbank erstellen
+```bash
+docker compose exec app php bin/console doctrine:schema:update --em mysql --force
+```
+Cache löschen
+```bash
+docker compose exec app php bin/console cache:clear
+```
+
+
