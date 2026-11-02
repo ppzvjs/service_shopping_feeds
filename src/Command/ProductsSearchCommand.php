@@ -14,7 +14,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'products:search',
-    description: 'Add a short description for your command',
+    description: 'Sucht Produkte in Cover nach Artikelnummer',
 )]
 class ProductsSearchCommand extends Command
 {

@@ -14,7 +14,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'cover:products',
-    description: 'Add a short description for your command',
+    description: 'Zeigt die ersten 100 Produkte aus Cover als Tabelle',
 )]
 class CoverProductsCommand extends Command
 {

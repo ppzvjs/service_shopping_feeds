@@ -44,9 +44,13 @@ class FeedUpdateCommand extends Command
                 $stats = $this->importer->import($feed->getId());
 
                 $io->success(sprintf(
-                    'Erfolgreich! Verarbeitet: %d | Neu: %d | Aktualisiert: %d | Blacklisted: %d | Gelöscht: %d',
-                    $stats['processed'], $stats['inserted'], $stats['updated'], $stats['blacklisted'], $stats['deleted']
+                    'Erfolgreich! Verarbeitet: %d | Neu: %d | Aktualisiert: %d | Blacklisted: %d | Gelöscht: %d | Mit GTIN: %d (davon aus Cover: %d)',
+                    $stats['processed'], $stats['inserted'], $stats['updated'], $stats['blacklisted'], $stats['deleted'],
+                    $stats['withGtin'], $stats['gtinFromCover']
                 ));
+                foreach ($stats['warnings'] as $warning) {
+                    $io->warning($warning);
+                }
             } catch (\Exception $e) {
                 $io->error(sprintf('Fehler beim Verarbeiten von Feed "%s": %s', $feed->getName(), $e->getMessage()));
             }

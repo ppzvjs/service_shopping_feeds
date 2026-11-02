@@ -3,12 +3,26 @@
 {% block body %}
     <div style="max-width: 1400px; margin: 40px auto; font-family: sans-serif; padding: 0 20px;">
 
-        {# HAUPTTITEL (Fungiert als Home-Button) #}
-        <h1>
-            <a href="{{ path('app_feed_manager') }}" style="text-decoration: none; color: #333; transition: color 0.2s;" onmouseover="this.style.color='#1e88e5'" onmouseout="this.style.color='#333'">
-                📦 Multi-Feed Manager Dashboard
-            </a>
-        </h1>
+        {# HAUPTTITEL (Fungiert als Home-Button) + angemeldeter Benutzer #}
+        {% set currentUser = app.request.attributes.get('_keycloak_user') %}
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+            <h1>
+                <a href="{{ path('app_feed_manager') }}" style="text-decoration: none; color: #333; transition: color 0.2s;" onmouseover="this.style.color='#1e88e5'" onmouseout="this.style.color='#333'">
+                    📦 Multi-Feed Manager Dashboard
+                </a>
+            </h1>
+            {% if currentUser %}
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 14px; color: #555;">
+                    <span title="{{ currentUser.email ?? currentUser.username }}">
+                        👤 Angemeldet als <strong style="color: #333;">{{ currentUser.name }}</strong>
+                        {% if currentUser.name != currentUser.username %}<span style="color: #888;">({{ currentUser.username }})</span>{% endif %}
+                    </span>
+                    <a href="{{ path('app_keycloak_logout') }}" style="text-decoration: none; background: #fff; color: #c62828; border: 1px solid #c62828; padding: 6px 14px; border-radius: 4px; font-weight: bold; font-size: 13px; transition: all 0.2s;" onmouseover="this.style.background='#c62828'; this.style.color='#fff'" onmouseout="this.style.background='#fff'; this.style.color='#c62828'">
+                        Abmelden
+                    </a>
+                </div>
+            {% endif %}
+        </div>
 
         {# Flash Messages #}
         {% for label, messages in app.flashes %}
@@ -63,13 +77,19 @@
                 <div>
                     <h3 style="margin: 0 0 5px 0;">Feed manuell verarbeiten</h3>
                     <p style="margin: 0 0 8px 0; color: #555;">Aktuelle Quell-URL: <code style="background:#fff; padding:2px 4px; border:1px solid #ddd; border-radius:3px;">{{ activeFeed.feedUrl }}</code></p>
-                    <p style="margin: 0; color: #555;">💡 Export-URL für Drittsysteme:
+                    <p style="margin: 0; color: #555;">💡 Google-Export (XML):
                         <a href="{{ path('app_feed_export', {id: activeFeed.id}) }}" target="_blank" style="color: #1e88e5; font-weight: bold; text-decoration: underline;">
                             {{ url('app_feed_export', {id: activeFeed.id}) }}
                         </a>
                     </p>
+                    <p style="margin: 6px 0 0 0; color: #555;">🛒 idealo-Export (CSV):
+                        <a href="{{ path('app_feed_export_idealo', {id: activeFeed.id}) }}" target="_blank" style="color: #e65100; font-weight: bold; text-decoration: underline;">
+                            {{ url('app_feed_export_idealo', {id: activeFeed.id}) }}
+                        </a>
+                    </p>
                 </div>
                 <form action="{{ path('app_feed_run_import', {id: activeFeed.id}) }}" method="POST" style="margin: 0;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('app_feed_run_import' ~ activeFeed.id) }}">
                     <button type="submit" style="background: #1e88e5; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; white-space: nowrap; transition: background 0.2s;" onmouseover="this.style.background='#1565c0'" onmouseout="this.style.background='#1e88e5'">
                         🔄 Jetzt "{{ activeFeed.name }}" synchronisieren
                     </button>
@@ -108,6 +128,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
                     <h3 style="margin: 0; font-size: 18px;">1. Feed-Einstellungen & Preis-Filter</h3>
                     <form action="{{ path('app_feed_delete', {id: activeFeed.id}) }}" method="POST" onsubmit="return confirm('Möchtest du den kompletten Feed &quot;{{ activeFeed.name }}&quot; wirklich löschen? Dabei werden alle Produkte, Blacklists, Whitelists und Versandregeln dieses Feeds unwiderruflich entfernt!');" style="margin: 0;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('app_feed_delete' ~ activeFeed.id) }}">
                         <button type="submit" style="background: #c62828; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='#b71c1c'" onmouseout="this.style.background='#c62828'">
                             🗑️ Feed löschen
                         </button>
@@ -168,6 +189,7 @@
                                 <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                                     <code>{{ item.sku }}</code>
                                     <form action="{{ path('app_feed_delete_blacklist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Sperrung aufheben?');" style="margin: 0;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('app_feed_delete_blacklist' ~ item.id) }}">
                                         <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold; font-size: 12px;">Löschen</button>
                                     </form>
                                 </li>
@@ -198,6 +220,7 @@
                                 <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                                     <code style="color: #2e7d32; font-weight: bold;">{{ item.sku }}</code>
                                     <form action="{{ path('app_feed_delete_whitelist', {id: item.id}) }}" method="POST" onsubmit="return confirm('Ausnahme vom globalen Ausschluss entfernen?');" style="margin: 0;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('app_feed_delete_whitelist' ~ item.id) }}">
                                         <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold; font-size: 12px;">Löschen</button>
                                     </form>
                                 </li>
@@ -227,6 +250,7 @@
                             <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                                 <span>🏷️ <code>{{ item.sku }}</code></span>
                                 <form action="{{ path('app_feed_delete_override_sale', {id: item.id}) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Regel wirklich entfernen?');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('app_feed_delete_override_sale' ~ item.id) }}">
                                     <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-weight:bold; font-size: 12px;">Löschen</button>
                                 </form>
                             </li>
@@ -266,6 +290,7 @@
                                     <td style="padding: 6px 8px; font-weight: bold;">{{ rule.shippingCost|number_format(2, ',', '.') }} €</td>
                                     <td style="padding: 6px 8px; text-align: right;">
                                         <form action="{{ path('app_feed_delete_shipping', {id: rule.id}) }}" method="POST" style="margin: 0;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('app_feed_delete_shipping' ~ rule.id) }}">
                                             <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-size: 12px;">Entfernen</button>
                                         </form>
                                     </td>
@@ -295,6 +320,7 @@
                                 <li style="padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
                                     <span style="color: #2e7d32; font-weight: bold;">🚚 <code>{{ rule.skuPattern }}</code></span>
                                     <form action="{{ path('app_feed_delete_free_shipping', {id: rule.id}) }}" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('app_feed_delete_free_shipping' ~ rule.id) }}">
                                         <button type="submit" style="background:none; border:none; color:#c62828; cursor:pointer; font-size: 12px;">Entfernen</button>
                                     </form>
                                 </li>
@@ -306,6 +332,37 @@
 
                 </div>
 
+            </div>
+
+            {# SEKTION 6: IDEALO #}
+            <div style="background: #fff8e1; padding: 20px; border-radius: 6px; margin-top: 30px; border: 1px solid #ffe082;">
+                <h3 style="margin: 0 0 15px 0; font-size: 18px; border-bottom: 1px solid #ffe082; padding-bottom: 10px;">6. idealo-Einstellungen</h3>
+                {{ form_start(idealoForm) }}
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>{{ form_row(idealoForm.idealoDelivery, {attr: {style: 'width:100%; padding:8px; box-sizing: border-box;', placeholder: 'Lieferung in 3-5 Werktagen'}}) }}
+                        <div style="font-size: 12px; color: #777; margin-top: 4px;">Gilt nur, wenn in Cover (C2WART.LIEFER_ZEIT) für den Artikel nichts eingetragen ist. Leer = „Lieferung in 3-5 Werktagen“.</div></div>
+                    <div>{{ form_row(idealoForm.idealoCarrier, {attr: {style: 'width:100%; padding:8px; box-sizing: border-box;'}}) }}</div>
+                    <div>{{ form_row(idealoForm.idealoProcessingDays, {attr: {style: 'width:100%; padding:8px; box-sizing: border-box;', placeholder: 'optional'}}) }}</div>
+                </div>
+                <div style="margin-bottom: 15px;">{{ form_row(idealoForm.idealoDeliveryComment, {attr: {style: 'width:100%; padding:8px; box-sizing: border-box;', placeholder: 'z.B. Sperrgut wird per Spedition geliefert'}}) }}</div>
+
+                <h4 style="font-size: 14px; margin: 0 0 4px 0;">Zahlungsarten mit Zuschlag (€)</h4>
+                <p style="margin: 0 0 10px 0; font-size: 12px; color: #777;">Leer = Zahlungsart wird bei idealo nicht angezeigt. 0 = ohne Zuschlag. Mindestens eine Zahlungsart angeben.</p>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px;">
+                    {% for method, label in idealoPaymentMethods %}
+                        <div>{{ form_row(attribute(idealoForm, 'pay_' ~ method), {attr: {style: 'width:100%; padding:6px; box-sizing: border-box;', placeholder: '–'}}) }}</div>
+                    {% endfor %}
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                        {{ form_widget(idealoForm.idealoOnlyInStock, {attr: {style: 'cursor: pointer; transform: scale(1.2);'}}) }}
+                        {{ form_label(idealoForm.idealoOnlyInStock, null, {label_attr: {style: 'cursor: pointer; margin: 0;'}}) }}
+                    </div>
+                    <div style="font-size: 12px; color: #777;">Preise, Versandkosten (aus Sektion 4/5) und Blacklist gelten wie beim Google-Export.</div>
+                    <button type="submit" style="background: #e65100; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-weight: bold;">💾 idealo-Einstellungen speichern</button>
+                </div>
+                {{ form_end(idealoForm) }}
             </div>
         {% endif %}
     </div>

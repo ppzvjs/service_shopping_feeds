@@ -51,8 +51,9 @@ services:
         networks:
             - network_datenfeed
 
-    # 4. Composer-Helper
+    # 4. Composer-Helper (startet nicht bei "docker compose up", nur per "docker compose run --rm composer ...")
     composer:
+        profiles: ["tools"]
         build:
             context: .
             dockerfile: docker/composer/Dockerfile

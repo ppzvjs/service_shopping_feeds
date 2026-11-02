@@ -15,7 +15,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'google:product',
-    description: 'Add a short description for your command',
+    description: 'Erzeugt einen Google-Feed für eine Artikelnummer direkt aus Cover (Prototyp)',
 )]
 class GoogleProductCommand extends Command
 {

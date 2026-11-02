@@ -11,6 +11,9 @@ use App\Entity\Mysql\FreeShippingRule;
 use App\Entity\Mysql\Product;
 use App\Entity\Mysql\ShippingRule;
 use App\Service\FeedImporter;
+use App\Service\Idealo;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
@@ -19,7 +22,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 // Bestätigt
 
@@ -83,6 +86,58 @@ class FeedManagerController extends AbstractController
         if ($configForm->isSubmitted() && $configForm->isValid()) {
             $em->flush();
             $this->addFlash('success', 'Feed-Einstellungen wurden aktualisiert.');
+            return $this->redirectToRoute('app_feed_manager', ['active_feed' => $activeFeed->getId()]);
+        }
+
+        // --- FORMULAR G: IDEALO-EINSTELLUNGEN FÜR AKTIVEN FEED ---
+        $idealoBuilder = $this->container->get('form.factory')->createNamedBuilder('idealo_form', FormType::class, $activeFeed)
+            ->add('idealoDelivery', TextType::class, [
+                'label' => 'Standard-Lieferzeit',
+                'required' => false,
+                'attr' => ['maxlength' => 255],
+            ])
+            ->add('idealoCarrier', ChoiceType::class, [
+                'label' => 'Versanddienstleister',
+                'choices' => array_flip(Idealo::CARRIERS),
+            ])
+            ->add('idealoProcessingDays', IntegerType::class, [
+                'label' => 'Max. Bearbeitungszeit (Werktage)',
+                'required' => false,
+                'attr' => ['min' => 1],
+            ])
+            ->add('idealoDeliveryComment', TextType::class, [
+                'label' => 'Versandkommentar (optional)',
+                'required' => false,
+                'attr' => ['maxlength' => 150],
+            ])
+            ->add('idealoOnlyInStock', CheckboxType::class, [
+                'label' => 'Nur lieferbare Artikel (in stock) übertragen',
+                'required' => false,
+            ]);
+        $paymentCosts = $activeFeed->getIdealoPaymentCosts();
+        foreach (Idealo::PAYMENT_METHODS as $method => $label) {
+            $idealoBuilder->add('pay_' . $method, NumberType::class, [
+                'label' => $label,
+                'mapped' => false,
+                'required' => false,
+                'scale' => 2,
+                'data' => $paymentCosts[$method] ?? null,
+            ]);
+        }
+        $idealoForm = $idealoBuilder->getForm();
+
+        $idealoForm->handleRequest($request);
+        if ($idealoForm->isSubmitted() && $idealoForm->isValid()) {
+            $costs = [];
+            foreach (array_keys(Idealo::PAYMENT_METHODS) as $method) {
+                $value = $idealoForm->get('pay_' . $method)->getData();
+                if ($value !== null && $value !== '') {
+                    $costs[$method] = round((float) $value, 2);
+                }
+            }
+            $activeFeed->setIdealoPaymentCosts($costs);
+            $em->flush();
+            $this->addFlash('success', 'idealo-Einstellungen wurden gespeichert.');
             return $this->redirectToRoute('app_feed_manager', ['active_feed' => $activeFeed->getId()]);
         }
 
@@ -177,6 +232,8 @@ class FeedManagerController extends AbstractController
             'activeFeed' => $activeFeed,
             'addFeedForm' => $addFeedForm->createView(),
             'configForm' => $configForm->createView(),
+            'idealoForm' => $idealoForm->createView(),
+            'idealoPaymentMethods' => Idealo::PAYMENT_METHODS,
             'blacklistForm' => $blacklistForm->createView(),
             'whitelistForm' => $whitelistForm->createView(),
             'overrideSaleForm' => $overrideSaleForm->createView(), // NEU übergeben
@@ -194,6 +251,10 @@ class FeedManagerController extends AbstractController
     #[Route('run/{id}', name: 'app_feed_run_import', methods: ['POST'])]
     public function runImport(int $id, FeedImporter $importer, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_run_import' . $id, $request->request->getString('_token'))) {
+            return $this->invalidToken($id);
+        }
+
         try {
             $stats = $importer->import($id);
 
@@ -202,9 +263,13 @@ class FeedManagerController extends AbstractController
             $session->set('last_sync_total_' . $id, $stats['processed'] + $stats['blacklisted']);
 
             $this->addFlash('success', sprintf(
-                'Import erfolgreich! Verarbeitet: %d | Neu: %d | Aktualisiert: %d | Blacklisted: %d | Gelöscht: %d',
-                $stats['processed'], $stats['inserted'], $stats['updated'], $stats['blacklisted'], $stats['deleted']
+                'Import erfolgreich! Verarbeitet: %d | Neu: %d | Aktualisiert: %d | Blacklisted: %d | Gelöscht: %d | Mit GTIN: %d (davon aus Cover: %d)',
+                $stats['processed'], $stats['inserted'], $stats['updated'], $stats['blacklisted'], $stats['deleted'],
+                $stats['withGtin'], $stats['gtinFromCover']
             ));
+            foreach ($stats['warnings'] as $warning) {
+                $this->addFlash('error', $warning);
+            }
         } catch (\Exception $e) {
             $this->addFlash('error', 'Fehler beim Import: ' . $e->getMessage());
         }
@@ -213,8 +278,12 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-blacklist/{id}', name: 'app_feed_delete_blacklist', methods: ['POST'])]
-    public function deleteBlacklist(FeedBlackList $item, EntityManagerInterface $em): Response
+    public function deleteBlacklist(FeedBlackList $item, EntityManagerInterface $em, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_delete_blacklist' . $item->getId(), $request->request->getString('_token'))) {
+            return $this->invalidToken($item->getFeed()->getId());
+        }
+
         $feedId = $item->getFeed()->getId();
         $em->remove($item);
         $em->flush();
@@ -223,8 +292,12 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-whitelist/{id}', name: 'app_feed_delete_whitelist', methods: ['POST'])]
-    public function deleteWhitelist(FeedWhiteList $item, EntityManagerInterface $em): Response
+    public function deleteWhitelist(FeedWhiteList $item, EntityManagerInterface $em, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_delete_whitelist' . $item->getId(), $request->request->getString('_token'))) {
+            return $this->invalidToken($item->getFeed()->getId());
+        }
+
         $feedId = $item->getFeed()->getId();
         $em->remove($item);
         $em->flush();
@@ -233,8 +306,12 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-shipping/{id}', name: 'app_feed_delete_shipping', methods: ['POST'])]
-    public function deleteShipping(ShippingRule $rule, EntityManagerInterface $em): Response
+    public function deleteShipping(ShippingRule $rule, EntityManagerInterface $em, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_delete_shipping' . $rule->getId(), $request->request->getString('_token'))) {
+            return $this->invalidToken($rule->getFeed()->getId());
+        }
+
         $feedId = $rule->getFeed()->getId();
         $em->remove($rule);
         $em->flush();
@@ -243,8 +320,12 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-free-shipping/{id}', name: 'app_feed_delete_free_shipping', methods: ['POST'])]
-    public function deleteFreeShipping(FreeShippingRule $rule, EntityManagerInterface $em): Response
+    public function deleteFreeShipping(FreeShippingRule $rule, EntityManagerInterface $em, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_delete_free_shipping' . $rule->getId(), $request->request->getString('_token'))) {
+            return $this->invalidToken($rule->getFeed()->getId());
+        }
+
         $feedId = $rule->getFeed()->getId();
         $em->remove($rule);
         $em->flush();
@@ -253,8 +334,12 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-feed/{id}', name: 'app_feed_delete', methods: ['POST'])]
-    public function deleteFeed(FeedConfig $feed, EntityManagerInterface $em): Response
+    public function deleteFeed(FeedConfig $feed, EntityManagerInterface $em, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_delete' . $feed->getId(), $request->request->getString('_token'))) {
+            return $this->invalidToken($feed->getId());
+        }
+
         $em->remove($feed);
         $em->flush();
 
@@ -263,12 +348,26 @@ class FeedManagerController extends AbstractController
     }
 
     #[Route('delete-override-sale/{id}', name: 'app_feed_delete_override_sale', methods: ['POST'])]
-    public function deleteOverrideSale(FeedOverrideSale $item, EntityManagerInterface $em): Response
+    public function deleteOverrideSale(FeedOverrideSale $item, EntityManagerInterface $em, Request $request): Response
     {
+        if (!$this->isCsrfTokenValid('app_feed_delete_override_sale' . $item->getId(), $request->request->getString('_token'))) {
+            return $this->invalidToken($item->getFeed()->getId());
+        }
+
         $feedId = $item->getFeed()->getId();
         $em->remove($item);
         $em->flush();
         $this->addFlash('success', 'Sale-Override-Regel entfernt.');
         return $this->redirectToRoute('app_feed_manager', ['active_feed' => $feedId]);
+    }
+
+    /**
+     * Schutz gegen untergeschobene Formular-Anfragen (CSRF) für Löschen/Import.
+     */
+    private function invalidToken(?int $feedId): Response
+    {
+        $this->addFlash('error', 'Die Anfrage war ungültig oder abgelaufen. Bitte die Seite neu laden und erneut versuchen.');
+
+        return $this->redirectToRoute('app_feed_manager', $feedId ? ['active_feed' => $feedId] : []);
     }
 }

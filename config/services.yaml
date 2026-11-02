@@ -4,6 +4,15 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    # Shop-URL, die im <link> des exportierten Feeds steht
+    app.shop_url: '%env(default:app.shop_url_default:SHOP_URL)%'
+    app.shop_url_default: 'https://pareyshop.de'
+    # Keycloak-Login ist standardmäßig aktiv (abschaltbar mit KEYCLOAK_ENABLED=0)
+    keycloak_enabled_default: '1'
+    # Lieferzeit je Artikel aus Cover (C2WART.LIEFER_ZEIT) lesen (abschaltbar mit COVER_DELIVERY_TIME=0)
+    cover_delivery_time_default: '1'
+    # GTIN/ISBN-Quellen in Cover, der Reihe nach (siehe App\Service\CoverGtinLookup)
+    cover_gtin_sources_default: 'BUAUFL.EAN:L_AUSG_NR+L_AUFL_NR,BUAUSGAB.EAN:L_AUSG_NR,BUAUSGAB.ISBN:L_AUSG_NR'
 
 services:
     # default configuration for services in *this* file

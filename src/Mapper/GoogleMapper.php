@@ -119,6 +119,7 @@ class GoogleMapper
         $suffix = ''; // will hold '', '_1', '_2', etc. once found
 
         foreach ($images as $key => $image) {
+            $url = null; // pro Bild neu ermitteln (vorher wurde die URL des vorigen Bildes weiterverwendet)
             $verwendTyp = trim($image->getVerwendTyp());
             $position   = $image->getPosition();
             $filetype   = pathinfo($image->getDateiName(), PATHINFO_EXTENSION);
@@ -198,7 +199,7 @@ class GoogleMapper
         $shippingcost = 0;
         # check sperrgut
         $buausgab = $this->conn->getRepository(ProductsBuAusGab::class)->findOneBy(['id' => $product->getLAusgNr()]);
-        if($buausgab->getWarnId() == 'SPE'){
+        if($buausgab !== null && $buausgab->getWarnId() == 'SPE'){
             $shippingcost += 19.95;
         }
         # normal shipping costs?

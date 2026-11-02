@@ -13,7 +13,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'abo:paypal',
-    description: 'Add a short description for your command',
+    description: 'Exportiert PayPal-Abos mit mehreren Positionen aus Cover als CSV nach /opt/feed/',
 )]
 class AboPaypalCommand extends Command
 {
@@ -150,12 +150,13 @@ FROM (
         ON a.OBJ_NR = m.OBJ_NR
        AND a.PREIS_KAT = m.PREIS_KAT
        AND a.FAKT_ZR = m.FAKT_ZR
-    WHERE a.BEST_NR = '" . $orderNumber . "'
+    WHERE a.BEST_NR = :best_nr
 )
 WHERE RN = 1
 ";
         $connection = $this->registry->getConnection('cover');
         $stmt = $connection->prepare($sql);
+        $stmt->bindValue('best_nr', $orderNumber);
         $resultSet = $stmt->executeQuery();
         $results = $resultSet->fetchAllAssociative();
         return $results;
