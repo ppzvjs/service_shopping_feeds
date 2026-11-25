@@ -68,13 +68,12 @@ class IdealoExportController extends AbstractController
                 }
 
                 $images = array_filter(array_merge([(string) $product->getImageLink()], $product->getAdditionalImages() ?? []));
-
                 $row = [
                     $product->getRemoteId(),
                     $product->getBrand() ?? $product->getManufacturer(),
                     $product->getTitle(),
                     $product->getProductType(),
-                    $product->getLink(),
+                    Idealo::trackingUrl($product->getLink()),
                     $product->getGtin(),
                     $this->plainText((string) $product->getDescription()),
                     implode(';', $images),
@@ -129,9 +128,21 @@ class IdealoExportController extends AbstractController
      */
     private function plainText(string $html): string
     {
-        $text = preg_replace('/<\s*(br|\/p|\/li|\/div|\/h\d)\s*\/?>/i', ' ', $html) ?? $html;
-        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        // Quellfeed ist teils doppelt kodiert ("&amp;uuml;") -> dekodieren, bis sich nichts mehr ändert
+        $text = $html;
+        for ($i = 0; $i < 3; $i++) {
+            $decoded = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $text) {
+                break;
+            }
+            $text = $decoded;
+        }
+
+        // Tags erst nach dem Dekodieren entfernen (auch kodierte wie "&lt;br&gt;").
+        // Kein strip_tags(): das würde bei Text wie "Gewicht <5 kg" den Rest abschneiden.
+        $text = preg_replace('/<\s*(br|\/p|\/li|\/div|\/h\d)\s*\/?>/i', ' ', $text) ?? $text;
+        $text = preg_replace('/<!--.*?-->|<\/?[a-z][a-z0-9]*(?:\s[^>]*)?\/?>/is', '', $text) ?? $text;
+        $text = trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $text) ?? $text);
 
         if (mb_strlen($text) > self::MAX_DESCRIPTION) {
             $text = mb_substr($text, 0, self::MAX_DESCRIPTION - 1);
